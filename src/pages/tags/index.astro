@@ -1,39 +1,32 @@
 ---
-import BaseLayout from "../../layouts/base-layout.astro";
-const allPosts = Object.values(
-    import.meta.glob("../posts/*.md", { eager: true }),
-);
-const tags = [
-    ...new Set(allPosts.map((post: any) => post.frontmatter.tags).flat()),
-];
-const pageTitle = "Tag Index";
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Breadcrumb from "@/components/Breadcrumb.astro";
+import Main from "@/components/Main.astro";
+import Footer from "@/components/Footer.astro";
+import Tag from "@/components/Tag.astro";
+import { getUniqueTags } from "@/utils/getUniqueTags";
+import { useTranslations } from "@/i18n";
+import config from "@/config";
+
+const posts = await getCollection("posts", ({ data }) => !data.draft);
+const tags = getUniqueTags(posts);
+
+const locale = Astro.currentLocale ?? config.site.lang;
+const t = useTranslations(locale);
 ---
 
-<BaseLayout pageTitle={pageTitle}>
-    <div class="tags">
-        {tags.map((tag) => (
-            <p class="tag">
-                <a href={`/tags/${tag}`}>{tag}</a>
-            </p>
-        ))}
-    </div>
-</BaseLayout>
-<style>
-    a {
-        color: #00539f;
-    }
+<Layout title={`${t.pages.tagsTitle} | ${config.site.title}`}>
+  <Header />
 
-    .tags {
-        display: flex;
-        flex-wrap: wrap;
-    }
+  <Breadcrumb />
 
-    .tag {
-        margin: 0.25em;
-        border: dotted 1px #a1a1a1;
-        border-radius: 0.5em;
-        padding: 0.5em 1em;
-        font-size: 1.15em;
-        background-color: #f8fcfd;
-    }
-</style>
+  <Main pageTitle={t.pages.tagsTitle} pageDesc={t.pages.tagsDesc}>
+    <ul class="flex flex-wrap gap-6">
+      {tags.map(({ tag, tagName }) => <Tag {tag} {tagName} />)}
+    </ul>
+  </Main>
+
+  <Footer />
+</Layout>
