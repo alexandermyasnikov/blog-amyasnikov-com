@@ -1,0 +1,15 @@
+version: '3'
+vars:
+  NOTES: '{{.HOME}}/data/notes/dev/blog-amyasnikov-com'
+  SITE: '{{.TASKFILE_DIR}}'
+tasks:
+  dev:
+    deps: [dev:sync, dev:astro]
+    failfast: true
+  dev:astro:
+    cmds:
+      - sh -c './node_modules/.bin/astro dev; exit 1'
+  dev:sync:
+    cmds:
+      - rsync --verbose --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
+      - fswatch --recursive --one-per-batch --latency 1 "{{.NOTES}}" | xargs -I{} rsync --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
