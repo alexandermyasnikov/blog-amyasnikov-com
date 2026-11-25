@@ -17,6 +17,10 @@ const config: ResolvedAstroPaperConfig = {
     lang: userConfig.site.lang ?? "en",
     timezone: userConfig.site.timezone ?? "UTC",
     dir: userConfig.site.dir ?? "ltr",
+    heroTitle: userConfig.site.heroTitle ?? "Mingalaba",
+    heroDescription:
+      userConfig.site.heroDescription ??
+      "AstroPaper is a minimal, responsive, accessible and SEO-friendly Astro blog theme.",
     googleVerification:
       userConfig.site.googleVerification || PUBLIC_GOOGLE_SITE_VERIFICATION,
   },

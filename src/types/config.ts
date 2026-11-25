@@ -5,6 +5,10 @@ interface SiteConfig {
   title: string;
   /** Short description used in SEO meta and RSS feed */
   description: string;
+  /** Heading shown on the home page */
+  heroTitle?: string;
+  /** Intro paragraph shown on the home page */
+  heroDescription?: string;
   /** Default post author name */
   author: string;
   /** Author profile URL (used in structured data) */
@@ -120,6 +124,8 @@ type ResolvedSiteConfig = Required<
     | "timezone"
     | "dir"
     | "ogImage"
+    | "heroTitle"
+    | "heroDescription"
   >
 > &
   Pick<SiteConfig, "profile" | "googleVerification">;

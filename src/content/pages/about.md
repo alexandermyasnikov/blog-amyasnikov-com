@@ -1,37 +1,30 @@
 ---
 title: "About"
-description: "A bit about me and this blog."
+description: "About Alexander Myasnikov — software engineer, interested in Go, system architecture and applied AI."
 ---
 
-AstroPaper is a minimal, accessible and SEO-friendly blog theme built with [Astro](https://astro.build/) and [Tailwind CSS](https://tailwindcss.com/).
+![Alexander Myasnikov avatar](/amyasnikov.webp)
 
-![Astro Paper](@/assets/images/astropaper-og.jpg)
+**Alexander Myasnikov** is a software engineer. RedBlueStrategy is a place for notes on building software, understanding systems, and using tools that make the work clearer.
 
-AstroPaper provides a solid foundation for blogs, or even portfolios\_ with full markdown support, built-in dark mode, and a clean layout that works out-of-the-box.
+## Elsewhere
 
-The blog posts in this theme also serve as guides, docs or example articles\_ making AstroPaper a flexible starting point for your next content-driven site.
+- Email: [myasnikov.alexander.s@gmail.com](mailto:myasnikov.alexander.s@gmail.com)
+- Telegram: [t.me/amyasnikov](https://t.me/amyasnikov)
+- LinkedIn: [linkedin.com/in/amyasnikov](https://linkedin.com/in/amyasnikov)
+- GitHub: [github.com/alexandermyasnikov](https://github.com/alexandermyasnikov)
+- GitLab: [gitlab.com/amyasnikov](https://gitlab.com/amyasnikov)
 
-## Features
+## What I work with
 
-AstroPaper comes with a set of useful features that make content publishing easy and effective:
+- Go and C/C++
+- System architecture and distributed systems
+- Kubernetes, Docker and Linux
+- TCP/IP and networks
+- Algorithms and computer science fundamentals
 
-- SEO-friendly
-- Fast performance
-- Light & dark mode
-- Highly customizable
-- Organizable blog posts
-- Responsive & accessible
-- Static search with [PageFind](https://pagefind.app/)
-- Automatic social image generation
+## Currently exploring
 
-and so much more.
-
-## Show your support
-
-If you like [AstroPaper](https://github.com/satnaing/astro-paper), consider giving it a star ⭐️.
-
-Found a bug 🐛 or have an improvement ✨ in mind? Feel free to open an [issue](https://github.com/satnaing/astro-paper/issues), submit a [pull request](https://github.com/satnaing/astro-paper/pulls) or start a [discussion](https://github.com/satnaing/astro-paper/discussions).
-
-If you find this theme helpful, you can also [sponsor me on GitHub](https://github.com/sponsors/satnaing) or [buy me a coffee](https://buymeacoffee.com/satnaing) to show your support — every penny counts.
-
-Kyay zuu! 🙏🏼
+- Applied AI: LLMs, retrieval, agents and evaluation for real products
+- Developer tooling and automation that removes routine work
+- Local-first knowledge bases and note-taking systems

@@ -2,19 +2,23 @@ import { defineAstroPaperConfig } from "./src/types/config";
 
 export default defineAstroPaperConfig({
   site: {
-    url: "https://astro-paper.pages.dev/",
-    title: "AstroPaper",
-    description: "A minimal, responsive and SEO-friendly Astro blog theme.",
-    author: "Sat Naing",
-    profile: "https://satna.ing",
-    ogImage: "default-og.jpg",
+    url: "https://amyasnikov.com/",
+    title: "RedBlueStrategy",
+    description:
+      "RedBlueStrategy — notes on software engineering, system architecture and applied AI.",
+    heroTitle: "Welcome",
+    heroDescription:
+      "Notes on software engineering, system architecture and applied AI — focused on building software that lasts.",
+    author: "Alexander Myasnikov",
+    profile: "https://amyasnikov.com",
+    ogImage: "redbluestrategy.webp",
     lang: "en",
-    timezone: "Asia/Bangkok",
+    timezone: "UTC",
     dir: "ltr",
   },
   posts: {
-    perPage: 4,
-    perIndex: 4,
+    perPage: 10,
+    perIndex: 10,
   },
   features: {
     lightAndDarkMode: true,
@@ -22,17 +26,17 @@ export default defineAstroPaperConfig({
     showArchives: true,
     showBackButton: true,
     editPost: {
-      enabled: true,
-      url: "https://github.com/satnaing/astro-paper/edit/main/",
+      enabled: false,
     },
     search: "pagefind",
     toc: true,
   },
   socials: [
-    { name: "github",   url: "https://github.com/satnaing/astro-paper" },
-    { name: "x",        url: "https://x.com/username" },
-    { name: "linkedin", url: "https://www.linkedin.com/in/username/" },
-    { name: "mail",     url: "mailto:yourmail@gmail.com" },
+    { name: "github",   url: "https://github.com/alexandermyasnikov" },
+    { name: "linkedin", url: "https://linkedin.com/in/amyasnikov" },
+    { name: "telegram", url: "https://t.me/amyasnikov" },
+    { name: "gitlab",   url: "https://gitlab.com/amyasnikov" },
+    { name: "mail",     url: "mailto:myasnikov.alexander.s@gmail.com" },
   ],
   shareLinks: [
     { name: "whatsapp", url: "https://wa.me/?text=" },
