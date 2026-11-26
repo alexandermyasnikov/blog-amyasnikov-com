@@ -1,5 +1,7 @@
 ---
 import { type CollectionEntry, getCollection, render } from "astro:content";
+import type { ImageMetadata } from "astro";
+import { Image } from "astro:assets";
 import PostLayout from "@/layouts/PostLayout.astro";
 import Header from "@/components/header.astro";
 import Footer from "@/components/footer.astro";
@@ -79,6 +81,17 @@ const {
 const { Content, headings } = await render(post);
 const tocHeadings = config.features.toc && !hideToc ? headings : [];
 
+const covers = import.meta.glob(
+  "../../../content/posts/_notes/assets/*/featuredImage.*",
+  { import: "default", eager: true }
+);
+const coverKey = Object.keys(covers).find(key =>
+  key.startsWith(
+    `../../../content/posts/_notes/assets/${Astro.params.slug}/featuredImage.`
+  )
+);
+const cover = coverKey ? (covers[coverKey] as ImageMetadata) : undefined;
+
 let ogImageUrl: string | undefined;
 
 if (typeof initOgImage === "string") {
@@ -123,6 +136,8 @@ const ogImage = ogImageUrl
     >
       {title}
     </h1>
+
+    {cover && <Image src={cover} alt={title} class="my-4 w-full rounded-lg" />}
 
     <div class="my-2 flex items-center gap-2">
       <Datetime {pubDatetime} {modDatetime} {timezone} size="lg" />
