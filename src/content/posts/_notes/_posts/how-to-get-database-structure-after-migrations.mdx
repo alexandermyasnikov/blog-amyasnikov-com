@@ -1,0 +1,100 @@
+---
+title: How to View the Latest Database Schema Post-Migrations
+description: "A Go utility that spins up a clean PostgreSQL container with testcontainers, applies goose migrations for each service, and dumps the resulting schema with pg_dump to keep every service's SQL schema up to date."
+pubDatetime: 2025-10-04
+tags:
+    - Golang
+    - docker
+    - PostgreSQL
+    - pg_dump
+    - goose
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+
+
+## How to Get the Current Database Schema After Migrations
+
+When a database schema changes frequently, the project eventually accumulates a large number of migration files.
+Each migration covers only a single change - adding a column, modifying its type, renaming a table, dropping an index, and so on.
+These migrations may also be implemented differently - some as raw SQL, others in Go code.
+
+Over time they form a long chain, and it becomes non-trivial to understand the actual state of the database at any given moment.
+This is especially true if the project evolves quickly or is maintained by several teams.
+
+Things get even more complicated in a multi-service architecture, where each service has its own schema and its own set of migrations.
+It’s easy to lose track of which migration belongs to which schema - and understanding the current structure of each database becomes a challenge.
+
+Input context:
+The services are written in Go, and each service has its own independent migrations implemented both in SQL and in Go — each targeting its own schema. All services share a single `PostgreSQL` database and use `Goose` for migrations.
+
+
+## Service Structure
+
+All migrations for each service are stored in its own migrations directory:
+```sh
+❯ tree migrations
+migrations
+├── 20250917161808_tasks_create_table.sql
+├── 20250920121003_add_priority_column.go
+├── 20250920143353_add_index_to_tasks.sql
+├── 20250922201310_migrate_task_status.go
+├── 20250921151515_update_task_constraints.sql
+...
+```
+Migration files may be written either in SQL or in Go, and are defined in a format compatible with `goose`.
+
+Each service exposes a `MigrationsSchema` — the name of the schema its migrations belong to — and a `MigrationsFS`, an embedded file system (`embed.FS`) that contains all migration files for that service:
+```go
+var (
+	//go:embed migrations/*
+	MigrationsFS embed.FS
+
+	MigrationsSchema = "taskrepository"
+)
+```
+
+
+## Migrator structure
+
+Since the structure and format of migrations are the same across all services, we can implement a shared function to apply them.
+Input: a database connector, the schema name, and the migration files.
+<CodeFile file="migrate.go" />
+
+Key points:
+* If the target schema does not exist, it must be created — otherwise `goose` won't be able to create the `goose_db_version` table.
+* `migrationsFS` initially points to the `migrations` directory. However, `goose` expects the migration files to be located in the current directory (`"."`). Therefore, `fs.Sub` is used to switch the working directory.
+
+
+## Schema Generator Structure
+
+`goose` can apply migrations directly to a database — all it needs are the database connection parameters and the migration files.
+
+To obtain the database schema, we can use the `pg_dump` utility. This only requires specifying the database connection parameters and the output format.
+Example command: `pg_dump --schema-only --format=plain --no-owner --username=postgres --dbname=testdb`.
+
+The schema generation process consists of four steps:
+* Launch a clean `PostgreSQL` instance in `Docker`.
+* Apply the migrations to the database using `goose`.
+* Extract the database schema with `pg_dump`.
+* Save the resulting schema to a file.
+
+In code, this is implemented as follows: we first gather the `MigrationsSchema` and `MigrationsFS` for each service, and then save the current schema:
+<CodeFile file="run.go" />
+
+The `saveSchema` function launches a `PostgreSQL` container, applies the migrations, and saves the resulting schema to a file:
+<CodeFile file="save-schema.go" />
+
+In this implementation:
+* We start a clean `PostgreSQL` instance in `Docker`, using a lightweight `Alpine`-based image. `testcontainers` is used to manage Docker containers.
+* We construct the `DSN` and apply the migrations.
+* Inside the container, we run `pg_dump` with the required parameters. The output is sent to `stdout`. To ensure the output is clean and free of service-related binary headers, the `Multiplexed` option must be specified.
+* The output is then copied from the container into a file.
+
+Example of data from the resulting schema:
+<CodeFile file="schema.sql" />
+
+As a result, we obtain an up-to-date SQL schema for each service.
+The schemas are stored within the project and updated whenever new migrations are added.
+There’s no longer a need to mentally apply all migrations to understand the current database structure.
+Additionally, when developing new migrations, you can immediately see the final state of the schema and verify that there are no errors during its application.

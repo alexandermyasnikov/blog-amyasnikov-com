@@ -1,0 +1,150 @@
+---
+title: "Unpwnable Shop — PascalCTF 2025"
+description: "Exploiting a 5-byte buffer overflow in an intentionally unpwnable shop: overwriting the username length, hijacking the return address with a win function, and getting a shell in Go and Bash."
+pubDatetime: 2025-04-01
+tags:
+    - CTF
+    - pwn
+    - Stack-Based Buffer Overflow
+    - pascalCTF
+    - Golang
+    - Bash
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import taskZip from '../assets/ctf-pascalctf-2025-unpwnable-shop/task.zip?url';
+
+## Initial Data
+
+**Description**
+You can try to pwn us, but my cousin already tried it and he says it's impossible!
+
+**Files**
+<a href={taskZip}>Download task.zip</a>
+
+## Analyzing the unpwnable Binary
+
+Let's decompile the `unpwnable` executable in `IDA` and look for something that could lead to the flag.
+
+There's a `win` function that launches a `shell`:
+```c
+__int64 win()
+{
+  return execve("/bin/sh", 0LL, 0LL);
+}
+```
+
+The `win` function isn't used anywhere. We need to check whether it can be called somehow.
+
+Let's look at the `main` function:
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v3; // edx
+  int v4; // ecx
+  int v5; // r8d
+  int v6; // r9d
+  int v7; // edx
+  int v8; // ecx
+  int v9; // r8d
+  int v10; // r9d
+  int v12; // [rsp+Ch] [rbp-54h] BYREF
+  char v13[76]; // [rsp+10h] [rbp-50h] BYREF
+  unsigned int v14; // [rsp+5Ch] [rbp-4h]
+
+  ssignal(14LL, handle_alarm, envp);
+  alarm(30LL);
+  init();
+  v14 = 81;
+  puts("Welcome to Unpwnable shop!\n***Now with support for abnormally long usernames!!1!***");
+  puts("To continue insert your name (don't even think about overwriting some return addresses, you can't lmao) :");
+  fgets(v13, 81LL, stdin);
+  printf((unsigned int)"Welcome to the shop %s\n\n\n", (unsigned int)v13, v3, v4, v5, v6);
+  printMenu();
+  _isoc99_scanf((unsigned int)"%d", (unsigned int)&v12, v7, v8, v9, v10);
+  getchar();
+  if ( v12 )
+  {
+    puts("finding stuff to sell...");
+    sleep(1LL);
+    if ( v12 == 69 )
+    {
+      puts("What was your name again? I forgot it.");
+      fgets(v13, v14, stdin);
+      puts("Ok, just hold on while i finish searching.");
+      sleep(2LL);
+    }
+    puts("didn't find anything :(");
+  }
+  puts("Bye!");
+  return 0;
+}
+```
+
+There's a `v13` buffer of 76 bytes. Yet `fgets` reads 81 bytes.
+So we can overwrite the next 5 bytes of memory located after `v13`, i.e. the `v14` variable.
+Overwriting `v14` lets us write an arbitrary amount of data into `v13` and further up the stack in `fgets(v13, v14, stdin);`.
+
+`v13` is on the stack. What lies after `v13` toward higher addresses (i.e. back up the stack, since the program stack grows downward)?
+
+An approximate layout of the data on the stack:
+```asm
+High addresses
++---------------------+
+| return address      |  <- [rbp+8]
++---------------------+
+| saved RBP           |  <- [rbp]
++---------------------+
+| v14 (4 bytes)       |  <- [rbp-4]
++---------------------+
+| v13[76] (76 bytes)  |  <- [rbp-0x50]
++---------------------+
+| v12 (4 bytes)       |  <- [rbp-0x54]
++---------------------+
+Low addresses
+```
+
+If we overwrite the `return address` with the `win` function, then when `main` returns, `win` will be called.
+To do this, we need to write `76+4+8+8=96` bytes into `v13`.
+
+We can find the address of `win` with `objdump`:
+```sh
+❯ objdump -t ./unpwnable | grep --word-regexp "win"
+0000000000402f65 g     F .text	0000000000000020 win
+```
+
+## Writing the Exploit
+
+Overall, it's clear what to do. All that's left is to implement it.
+
+Algorithm:
+* Send 80 bytes, overwriting `v14` with 96.
+* Send `69` so the server asks for the name again.
+* Send 96 bytes, overwriting the `RBP` value with a pointer to the `win` function.
+* Get access to the terminal and run arbitrary commands to find the flag.
+
+Let's write the program in `Go`. The main part:
+
+<CodeFile file="main-1.go" />
+
+The full program:
+
+<CodeFile file="solve.go" />
+
+## Getting the Flag
+
+Run the program:
+
+<CodeFile file="solve-output.txt" />
+
+We got the flag `pascalCTF{N0O0o0o@O0_Hòw_D1D_Y0U_D0_17}`
+
+## Alternative Solution in Bash
+
+Similarly, we can quickly put together a solution in Bash:
+
+<CodeFile file="solve.sh" />
+
+Full output:
+
+<CodeFile file="solve-output-sh.txt" />

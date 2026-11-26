@@ -1,0 +1,56 @@
+---
+title: "DNS e Pancetta — PascalCTF 2025"
+description: "Recovering a flag hidden in DNS queries: third-level domains encode chunks of hex that a small Go packet parser assembles back into text."
+pubDatetime: 2025-03-30
+tags:
+    - CTF
+    - network
+    - pcap
+    - wireshark
+    - pascalCTF
+    - Golang
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import { Image } from 'astro:assets';
+import capturePcapng from '../assets/ctf-pascalctf-2025-dns-e-pancetta/capture.pcapng?url';
+import wiresharkPng from '../assets/ctf-pascalctf-2025-dns-e-pancetta/wireshark.png';
+
+
+## Initial Data
+
+**Description**
+I've recently started studying a new cooking book and I think I've found the best recipe ever.
+Do you wanna read it? Ask my dear friend DNS!
+
+**Files**
+<a href={capturePcapng}>Download capture.pcapng</a>
+
+## Solution
+
+We only have a `pcap` file with recorded network traffic.
+Open `capture.pcapng` in Wireshark and look at its contents.
+
+<Image src={wiresharkPng} alt="DNS requests. Wireshark" />
+
+There are only DNS requests and responses.
+
+All domain names have the same format, for example `636573207175616d.attacker.com`.
+Notice that `636573207175616d` looks like a hex-encoded string.
+Decoding `636573207175616d` gives `ces quam`.
+It is part of a longer string, so we need to reconstruct the whole thing.
+
+Let's write a Go program that:
+* reads all packets in sequence;
+* extracts third-level domains (i.e. `636573207175616d`) from DNS queries and joins them into a single string;
+* decodes the hex string into text.
+
+The full program:
+
+<CodeFile file="solve.go" />
+
+Run the program:
+
+<CodeFile file="solve-output.txt" />
+
+We get the flag `pascalCTF{DNS_b34coning_4ll_over_the_place}`.

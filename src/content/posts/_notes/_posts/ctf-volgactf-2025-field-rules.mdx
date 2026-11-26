@@ -1,0 +1,153 @@
+---
+title: "Field Rules — volgaCTF 2025"
+description: "Factoring a modulus built from small primes, brute-forcing the key residue modulo each prime, and combining the residues with the Chinese remainder theorem to recover the flag from repeated modular exponentiations."
+pubDatetime: 2025-04-05
+tags:
+    - CTF
+    - cryptography
+    - Chinese remainder theorem
+    - Factorization
+    - Brute-force search
+    - volgaCTF
+    - Golang
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import fieldRulesZip from '../assets/ctf-volgactf-2025-field-rules/field-rules.zip?url';
+
+
+## Initial Data
+
+**Description**
+Field is the goat, but what about...
+
+**Files**
+<a href={fieldRulesZip}>Download field-rules.zip</a>
+
+## Analyzing the chall.py File
+
+Let's look at the `chall.py` file:
+
+<CodeFile file="chall.py" />
+
+We can notice that `n` is a product of ~10-20 prime numbers. So we can try to factorize `n`:
+
+```py
+target_bl = len(flag) * 8
+prime_base = [getPrime(m) for _ in range(-(-target_bl // m) + 1)]
+n = reduce(mul, prime_base, 1)
+```
+
+```py
+def encrypt(m: bytes, key: int) -> bytes:
+    e = int.from_bytes(m)
+    for _ in range(ROUNDS - 1):
+        e += key
+        e = pow(e, k, n)
+    e = (e + key) % n
+    return e.to_bytes(e_len, "big")
+
+msgs, encs = [], []
+for i in range(10):
+    m = urandom(len(flag))
+    msgs.append(m)
+    encs.append(encrypt(m, key))
+```
+
+Each message is encrypted by the `encrypt` function and looks like this:
+
+$enc_j = (...((msg_j + key)^k + key)^k + ... + key) \mod n$
+
+Since `N` is a product of prime numbers, i.e. $N \equiv \prod_{i} p_{i}$, then
+
+$enc_j = (...((msg_j + key)^k + key)^k + ... + key) \mod p_i$
+
+for all factors of `N`.
+
+We can make the transition to
+
+$enc_j' = (...((msg_j' + key')^k + key')^k + ... + key') \mod p_i$
+
+where
+
+$enc_j' \equiv enc_j \mod p_i$
+
+$msg_j' \equiv msg_j \mod p_i$
+
+$key_j' \equiv key_j \mod p_i$
+
+$enc_j'$, $msg_j'$, $p_i'$ are easy to compute.
+
+We need to find the residues modulo $key_j$. They will have to be found by brute force. But since $p_i$ are not that large, it won't take much time.
+
+After finding all $key_j$, we get a system of equations:
+
+\(
+\begin{cases}
+x \equiv key_0' \mod p_0 \\
+x \equiv key_1' \mod p_1 \\
+x \equiv key_2' \mod p_2 \\
+x \equiv key_3' \mod p_3 \\
+... \\
+x \equiv key_r' \mod p_r \\
+\end{cases}
+\)
+
+where `x` is the flag, which is also `key`.
+
+The Chinese remainder theorem is used to solve such systems.
+
+It remains only to implement all the algorithms and get the flag.
+
+## Solution
+
+### Factorization
+
+We find all divisors of `n` by brute force. No optimizations are made. On this example it works very fast.
+
+Implementation:
+
+<CodeFile file="factorize.go" />
+
+### Finding Division Residues
+
+By iterating over numbers from 0 to `p`, we find a number which, after calling `encrypt`, gives the same residue of `enc` modulo `p`.
+
+If we search for residues using only one message, we may get numbers that fit only that message but not the others. So we need to check all messages (or at least two).
+
+Implementation:
+
+<CodeFile file="find-key-mod-p.go" />
+
+### Chinese Remainder Theorem
+
+An implementation based on the algorithm that is mentioned most often and is the simplest:
+
+* Compute the common modulus $N=\prod_{i} p_{i}$
+* Compute the auxiliary moduli $N_i=\frac{N}{p_i}$
+* Compute the inverse elements $N_i^{-1} \equiv \frac{1}{N_i} {\bmod {p_i}}$
+* Compute the desired value $x = \sum_{i}r_{i}N_{i}N_{i}^{-1} \mod N$
+
+Implementation:
+
+<CodeFile file="crt.go" />
+
+The main part:
+
+<CodeFile file="main.go" />
+
+Coroutines were added to improve performance. They cut the search for all residues by several times.
+
+The complete program:
+
+<CodeFile file="solve.go" />
+
+## Getting the Flag
+
+Run the program:
+
+<CodeFile file="solve-output.txt" />
+
+We got the flag `VolgaCTF{bru73_f0rc3_m3_l0v3_50m371m35}`
+
+The program runs for about 5 minutes. Factorization of `N` is very fast — it takes less than a second. The most time-consuming part is finding the residues; many variants have to be tried.

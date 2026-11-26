@@ -1,0 +1,188 @@
+---
+title: "MindBlowing — PascalCTF 2025"
+description: "Recovering a flag from a bitwise-AND number generator: extract 40-bit windows of the message with crafted seeds and combine them with OR in a Go solver."
+pubDatetime: 2025-03-28
+tags:
+    - CTF
+    - cryptography
+    - pascalCTF
+    - Golang
+    - Python
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import mindBlowingPy from '../assets/ctf-pascalctf-2025-mind-blowing/mind-blowing.py?url';
+
+
+## Initial Data
+
+**Description**
+My friend Marco recently dived into studying bitwise operators, and now he's convinced he's invented pseudorandom numbers!
+Could you help me figure out his secrets?
+
+**Files**
+<a href={mindBlowingPy}>Download mind-blowing.py</a>
+
+**TCP server**
+`0.0.0.0:420`
+
+## Solution
+
+### Example Server Interaction
+
+Example:
+```plain
+❯ nc 0.0.0.0 420
+Welcome to the italian MindBlowing game!
+1. Generate numbers
+2. Exit
+
+> 1
+Gimme the index of a sentence: 2
+Gimme the number of seeds: 3
+Seed of the number 1: 100
+Seed of the number 2: 5678
+Seed of the number 3: 123456789
+Result: [100, 4652, 104939797]
+Welcome to the italian MindBlowing game!
+1. Generate numbers
+2. Exit
+
+> 2
+```
+
+### Analyzing the mind-blowing.py Script
+
+The contents of `mind-blowing.py`:
+
+<CodeFile file="mind-blowing.py" />
+
+The `generate` function:
+```py
+def generate(seeds: list[int], idx: int) -> list[int]:
+    result = []
+    if idx < 0 or idx > 2:
+        return result
+    encoded = int.from_bytes(SENTENCES[idx], 'big')
+    for bet in seeds:
+        # why you're using 1s when 0s exist
+        if bet.bit_count() > 40:
+            continue
+        result.append(encoded & bet)
+
+    return result
+```
+
+The most interesting part of the file is the `generate` function.
+The `generate` function applies the `AND` operation to each seed value and `SENTENCES[idx]`.
+The restriction: a `seed` must have no more than 40 bits set to 1.
+
+### Flag Acquisition Algorithm
+
+We know that `A AND 1 == A`, so we use seed values in the format `0x00...00 FFFFFFFFFF 00...00`.
+This lets us learn 40 bits of the `SENTENCES[idx]` string from each `seed` value.
+
+This can be illustrated as follows:
+```py
+flag   = 0x <p_flag_N> ... <p_flag_2> <p_flag_1> <p_flag_0>
+AND
+seed   = 0x 0000000000 ... 0000000000 FFFFFFFFFF 0000000000
+=
+result = 0x 0000000000 ... 0000000000 <p_flag_1> 0000000000
+```
+
+After applying the `generate` function we get a list of partial values of the `SENTENCES[idx]` string.
+All that remains is to apply the OR operation to obtain the original value:
+```py
+0x 0000000000 ... 0000000000 0000000000 <p_flag_0>
+OR
+0x 0000000000 ... 0000000000 <p_flag_1> 0000000000
+OR
+0x 0000000000 ... <p_flag_2> 0000000000 0000000000
+OR
+0x <p_flag_N> ... 0000000000 0000000000 0000000000
+=
+0x <p_flag_N> ... <p_flag_2> <p_flag_1> <p_flag_0>
+```
+
+### Writing the Solver Program
+
+Write a program in Go.
+
+The main part of the algorithm:
+```go
+	seed := big.NewInt(0xFFFFFFFFFF)
+	for range seeds {
+		_ = readAll(conn, "Seed of the number")
+		write(conn, seed.String(), "\n")
+
+		seed.Lsh(seed, 5*8)
+	}
+
+	result := readAll(conn, `Result: \[(.*)\]`)
+	write(conn, "2", "\n")
+
+	resultList := strings.Split(result[0], ", ")
+	numResult := big.NewInt(0)
+	for _, num := range resultList {
+		bigNum, _ := new(big.Int).SetString(num, 10)
+		numResult.Or(numResult, bigNum)
+	}
+```
+
+Helper functions for interacting with the TCP server:
+```go
+func readAll(conn net.Conn, pattern string) []string {
+	if pattern == "" {
+		pattern = ".*"
+	}
+
+	err := conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	checkErr(err)
+
+	var buf bytes.Buffer
+	bufTmp := make([]byte, 1024)
+
+	defer func() {
+		fmt.Printf("%s", buf.String())
+	}()
+
+	for {
+		w, err := conn.Read(bufTmp)
+		if err != nil {
+			break
+		}
+
+		buf.Write(bufTmp[:w])
+
+		re := regexp.MustCompile(pattern)
+		res := re.FindStringSubmatch(buf.String())
+
+		if len(res) > 0 {
+			return res[1:]
+		}
+	}
+
+	return nil
+}
+
+func write(conn net.Conn, msgs ...string) {
+	for _, msg := range msgs {
+		fmt.Printf("%s", msg)
+		_, err := conn.Write([]byte(msg))
+		checkErr(err)
+	}
+}
+```
+
+The full program:
+
+<CodeFile file="solve.go" />
+
+### Getting the Flag
+
+Run the program:
+
+<CodeFile file="solve-output.txt" />
+
+We got the flag `pascalCTF{m4by3_1_sh0uld_ch3ck_th3_t0t4l_numb3r_0f_ONES}`.

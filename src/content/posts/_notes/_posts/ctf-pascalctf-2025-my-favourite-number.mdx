@@ -1,0 +1,137 @@
+---
+title: "My Favourite Number — PascalCTF 2025"
+description: "How to guess Alice's favourite number without decrypting anything: re-encrypt candidate binary-search answers with Bob's public RSA key and match them against the ciphertexts in output.txt."
+pubDatetime: 2025-03-27
+tags:
+    - CTF
+    - cryptography
+    - pascalCTF
+    - Golang
+    - Python
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import myFavouriteNumberPy from '../assets/ctf-pascalctf-2025-my-favourite-number/my-favourite-number.py?url';
+import outputTxt from '../assets/ctf-pascalctf-2025-my-favourite-number/output.txt?url';
+
+
+## Initial Data
+
+**Description**
+Alice and Bob are playing a fun game, can you guess Alice's favourite number too?
+
+**Files**
+<a href={myFavouriteNumberPy}>Download my-favourite-number.py</a>
+<a href={outputTxt}>Download output.txt</a>
+
+## Solution
+
+### Analysing my-favourite-number.py
+
+The contents of `my-favourite-number.py`:
+
+<CodeFile file="my-favourite-number.py" />
+
+The `sendToAlice` function:
+
+```py
+alice_p, alice_q = getPrime(1024), getPrime(1024)
+alice_n = alice_p * alice_q
+
+print(f"hi, i'm Alice, my public parameters are:\nn={alice_n}\ne={e}")
+
+def sendToAlice(msg):
+    pt = bytes_to_long(msg.encode())
+    assert pt < alice_n
+    ct = pow(pt, e, alice_n)
+    print(f"bob: {ct}")
+```
+
+The numbers `alice_p` and `alice_q` are private.
+The numbers `alice_n` and `alice_e` are public.
+Using `sendToAlice`, Bob can encrypt a message for Alice, knowing the public parameters `alice_n` and `alice_e`.
+Only Alice can decrypt this message. Bob cannot decrypt it because he does not know `alice_p` and `alice_q`.
+
+The same reasoning applies to `sendToBob`.
+
+```py
+alice_favourite_number = bytes_to_long(FLAG.encode())
+
+upperbound = 2**501
+lowerbound = 0
+while upperbound - lowerbound > 1:
+    mid = (upperbound + lowerbound) // 2
+    sendToAlice(f"Is your number greater than {mid}?")
+    if alice_favourite_number > mid:
+        sendToBob(f"Yes!, my number is greater than {mid}")
+        lowerbound = mid
+    else:
+        sendToBob(f"No!, my number is lower or equal to {mid}")
+        upperbound = mid
+
+sendToAlice(f"so your number is {upperbound}?")
+```
+
+Alice has thought of a number `alice_favourite_number` that Bob has to guess.
+Bob sends his guesses using binary search, and Alice answers "greater" or "lower".
+
+We only have the encrypted messages exchanged by Alice and Bob in `output.txt`.
+
+The goal is to decrypt the messages and learn `alice_favourite_number`.
+
+### Getting the flag
+
+We cannot decrypt the messages without knowing `p` and `q`. But we can encrypt messages, knowing `N` and `e`.
+We have a list of all encrypted messages, and we know the order and format of the messages from `my-favourite-number.py`.
+
+The initial values of `upperbound` and `lowerbound` are known.
+While `upperbound - lowerbound > 1`:
+* read the next encrypted message from `output.txt`;
+* encrypt the message `Yes!, my number is greater than {mid}`;
+* if they match, change `lowerbound`;
+* encrypt the message `No!, my number is lower or equal to {mid}`;
+* if they match, change `upperbound`.
+
+When the loop finishes, `upperbound` holds the desired value.
+
+### Writing the solver
+
+We implement a search for `alice_favourite_number`.
+We write the program in Go, and get some practice working with big numbers.
+
+<CodeFile file="solve.go" />
+
+### Obtaining the flag
+
+We run the program.
+We see it getting closer to the hidden number with every iteration.
+After 500 iterations, the number was found.
+
+```plain
+❯ go run ./main.go
+mid: 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+mid: 080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+mid: 040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+mid: 020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+mid: 010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+mid:
+...
+...
+...
+mid:                     70617363616c4354467b4431645f755f66696e645f6431666631335f68336c6c6d346e6e5f316e5f7468335f6d3164646c333f3f70
+mid:                     70617363616c4354467b4431645f755f66696e645f6431666631335f68336c6c6d346e6e5f316e5f7468335f6d3164646c333f3f78
+mid:                     70617363616c4354467b4431645f755f66696e645f6431666631335f68336c6c6d346e6e5f316e5f7468335f6d3164646c333f3f7c
+mid:                     70617363616c4354467b4431645f755f66696e645f6431666631335f68336c6c6d346e6e5f316e5f7468335f6d3164646c333f3f7e
+mid:                     70617363616c4354467b4431645f755f66696e645f6431666631335f68336c6c6d346e6e5f316e5f7468335f6d3164646c333f3f7d
+answer: pascalCTF{D1d_u_find_d1ff13_h3llm4nn_1n_th3_m1ddl3??}
+```
+
+The full output:
+
+<CodeFile file="solve-output.txt" />
+
+We get the flag `pascalCTF{D1d_u_find_d1ff13_h3llm4nn_1n_th3_m1ddl3??}`
+
+## Conclusion
+
+* Knowing the message format can reveal useful information. In the worst case, you have to brute-force it if the sequence of messages is unknown.

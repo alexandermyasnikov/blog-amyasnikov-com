@@ -1,0 +1,251 @@
+---
+title: "File Encryption with RSA in OpenSSL"
+description: "Breaking down RSA keys in OpenSSL at the byte level: generating a key pair, parsing the ASN.1 structure of private and public keys, then encrypting and decrypting a file with pkeyutl."
+pubDatetime: 2026-03-01
+tags:
+    - OpenSSL
+    - RSA
+    - asn.1
+    - cryptography
+---
+
+
+## File Encryption with RSA in OpenSSL
+
+RSA remains one of the most widely used asymmetric encryption algorithms, securing web data, digital signatures, and VPN tunnels. However, for many developers, the contents of key files remain a "black box."
+
+Using `OpenSSL`, we will break down the internal structure of RSA keys at the byte level and go through a full cycle from key pair generation to message decryption.
+
+## Key Pair Generation
+
+Create a private key:
+```sh
+❯ openssl genpkey -algorithm RSA -out privatekey.pem -pkeyopt rsa_keygen_bits:1024
+```
+
+Extract the public key from the private key:
+```sh
+❯ openssl rsa -pubout -in privatekey.pem -out publickey.pem
+```
+
+## Private Key Structure
+
+The generated `privatekey.pem` file is a text container. Let's look at its contents:
+```sh
+❯ cat privatekey.pem
+
+-----BEGIN PRIVATE KEY-----
+MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAK+QkqWfUKMvgi8u
+ovnTbD7sH9zlZXdUDMbGlwPFLGUC1nUKs0HyLrOsrHq8tlCm9WLYh5jMhbYZz1Wp
+9Y0hLzBqH2R+OPBf0Yk7J6Qd+hcpdOV0Y+IG0FMHOIYUIcBJwO0e/MdWaXS7z/7v
+SkYpQNgchOtl7v4QkmVY9Ac70bKfAgMBAAECgYEArinnsLHpFtmsdg3304ovmgQ4
+X7SaAdS5j/+2FCFoNxSnlxh0V/le5xNnT6Mh4cSfLd3MNoK+KrZT/pFKbST8X5AV
+p4xyMbuMA2s3WBXvwd0Y/8gM04g3/g5Q1v5Wcy2h78Seig6boXo9u7isD1WSkkMl
+9VC1J9nHQnQ1RUoXAdECQQDca42h7Fp10EmAn/NhNY3VFIIk6ib574XWCA7WLnqJ
+bDY8NKIuCajFQwH7AD4Q8dw9iHLoJreHL97cBsADZEsNAkEAy+d0eZWOhzQKVGq2
+WO0cQyBZ2yXslNR90Qd+Y1gTyFv4R5FYvmoMyNqZPpG2P8mUA36xj3vmPhnoLqn4
+eoHZWwJAXnKvo7yVHnp7pGPlc7fw6Gb7RToYLWyXGpklUl1kIFKAAthCzhtReAU4
+agc2kSgxySQYqKU+auz2P62cxVdKWQJAeO60WOwHlU6bFcgYkBNI4NMOF/idIQQJ
+/vBX2GnDieBqF2Av5vcU0Ac+PirDkX9nhs8cVkIgoxJQb2Sll1rt4wJADmJpNv71
+iLJAJXcMCT2kK/YNGnMQv2tL8mWs78xIEHonk0EXpJ36ZnYWXaMF8Bcw4G9rRNE8
+se6a++RUnU0JVA==
+-----END PRIVATE KEY-----
+```
+This is the `PEM` format. The string between the headers is a `base64`-encoded representation of the key's `ASN.1` structure.
+
+To see the "raw" internal layout, use the `asn1parse` utility. It displays the hierarchy of objects:
+```sh
+❯ openssl asn1parse -in privatekey.pem
+
+    0:d=0  hl=4 l= 630 cons: SEQUENCE
+    4:d=1  hl=2 l=   1 prim: INTEGER           :00
+    7:d=1  hl=2 l=  13 cons: SEQUENCE
+    9:d=2  hl=2 l=   9 prim: OBJECT            :rsaEncryption
+   20:d=2  hl=2 l=   0 prim: NULL
+   22:d=1  hl=4 l= 608 prim: OCTET STRING      [HEX DUMP]:3082025C02010002818100AF9092A59F50A32F822F2EA2F9D36C3EEC1FDCE56577540CC6C69703C52C6502D6750AB341F22EB3ACAC7ABCB650A6F562D88798CC85B619CF55A9F58D212F306A1F647E38F05FD1893B27A41DFA172974E57463E206D0530738861421C049C0ED1EFCC7566974BBCFFEEF4A462940D81C84EB65EEFE10926558F4073BD1B29F020301000102818100AE29E7B0B1E916D9AC760DF7D38A2F9A04385FB49A01D4B98FFFB61421683714A797187457F95EE713674FA321E1C49F2DDDCC3682BE2AB653FE914A6D24FC5F9015A78C7231BB8C036B375815EFC1DD18FFC80CD38837FE0E50D6FE56732DA1EFC49E8A0E9BA17A3DBBB8AC0F5592924325F550B527D9C7427435454A1701D1024100DC6B8DA1EC5A75D049809FF361358DD5148224EA26F9EF85D6080ED62E7A896C363C34A22E09A8C54301FB003E10F1DC3D8872E826B7872FDEDC06C003644B0D024100CBE77479958E87340A546AB658ED1C432059DB25EC94D47DD1077E635813C85BF8479158BE6A0CC8DA993E91B63FC994037EB18F7BE63E19E82EA9F87A81D95B02405E72AFA3BC951E7A7BA463E573B7F0E866FB453A182D6C971A9925525D6420528002D842CE1B517805386A0736912831C92418A8A53E6AECF63FAD9CC5574A59024078EEB458EC07954E9B15C818901348E0D30E17F89D210409FEF057D869C389E06A17602FE6F714D0073E3E2AC3917F6786CF1C564220A312506F64A5975AEDE302400E626936FEF588B24025770C093DA42BF60D1A7310BF6B4BF265ACEFCC48107A27934117A49DFA6676165DA305F01730E06F6B44D13CB1EE9AFBE4549D4D0954
+```
+
+The most interesting data is hidden in the `OCTET STRING` block at offset 22. Let's unpack this container:
+```sh
+❯ openssl asn1parse -in privatekey.pem --strparse 22
+
+    0:d=0  hl=4 l= 604 cons: SEQUENCE
+    4:d=1  hl=2 l=   1 prim: INTEGER           :00
+    7:d=1  hl=3 l= 129 prim: INTEGER           :AF9092A59F50A32F822F2EA2F9D36C3EEC1FDCE56577540CC6C69703C52C6502D6750AB341F22EB3ACAC7ABCB650A6F562D88798CC85B619CF55A9F58D212F306A1F647E38F05FD1893B27A41DFA172974E57463E206D0530738861421C049C0ED1EFCC7566974BBCFFEEF4A462940D81C84EB65EEFE10926558F4073BD1B29F
+  139:d=1  hl=2 l=   3 prim: INTEGER           :010001
+  144:d=1  hl=3 l= 129 prim: INTEGER           :AE29E7B0B1E916D9AC760DF7D38A2F9A04385FB49A01D4B98FFFB61421683714A797187457F95EE713674FA321E1C49F2DDDCC3682BE2AB653FE914A6D24FC5F9015A78C7231BB8C036B375815EFC1DD18FFC80CD38837FE0E50D6FE56732DA1EFC49E8A0E9BA17A3DBBB8AC0F5592924325F550B527D9C7427435454A1701D1
+  276:d=1  hl=2 l=  65 prim: INTEGER           :DC6B8DA1EC5A75D049809FF361358DD5148224EA26F9EF85D6080ED62E7A896C363C34A22E09A8C54301FB003E10F1DC3D8872E826B7872FDEDC06C003644B0D
+  343:d=1  hl=2 l=  65 prim: INTEGER           :CBE77479958E87340A546AB658ED1C432059DB25EC94D47DD1077E635813C85BF8479158BE6A0CC8DA993E91B63FC994037EB18F7BE63E19E82EA9F87A81D95B
+  410:d=1  hl=2 l=  64 prim: INTEGER           :5E72AFA3BC951E7A7BA463E573B7F0E866FB453A182D6C971A9925525D6420528002D842CE1B517805386A0736912831C92418A8A53E6AECF63FAD9CC5574A59
+  476:d=1  hl=2 l=  64 prim: INTEGER           :78EEB458EC07954E9B15C818901348E0D30E17F89D210409FEF057D869C389E06A17602FE6F714D0073E3E2AC3917F6786CF1C564220A312506F64A5975AEDE3
+  542:d=1  hl=2 l=  64 prim: INTEGER           :0E626936FEF588B24025770C093DA42BF60D1A7310BF6B4BF265ACEFCC48107A27934117A49DFA6676165DA305F01730E06F6B44D13CB1EE9AFBE4549D4D0954
+```
+This structure contains the following values:
+* `INTEGER 0x00` - Key version
+* `INTEGER 0xAF90..B29F` - RSA Modulus (`n = p * q`)
+* `INTEGER 0x010001` - Public Exponent (`e`). Value 65537
+* `INTEGER 0xAE29..01D1` - Private Exponent (`d`)
+* `INTEGER 0xDC6B..4B0D` - First prime number (`p`)
+* `INTEGER 0xCBE7..D95B` - Second prime number (`q`)
+* `INTEGER 0x5E72..4A59` - Value `d mod (p-1)`
+* `INTEGER 0x78EE..EDE3` - Value `d mod (q-1)`
+* `INTEGER 0x0E62..0954` - Value `q^-1 mod p`
+
+To avoid manual parsing, OpenSSL can output key parameters in a human-readable format:
+```sh
+❯ openssl rsa -in privatekey.pem -text -noout
+
+Private-Key: (1024 bit, 2 primes)
+modulus:
+    00:af:90:92:a5:9f:50:a3:2f:82:2f:2e:a2:f9:d3:
+    6c:3e:ec:1f:dc:e5:65:77:54:0c:c6:c6:97:03:c5:
+    2c:65:02:d6:75:0a:b3:41:f2:2e:b3:ac:ac:7a:bc:
+    b6:50:a6:f5:62:d8:87:98:cc:85:b6:19:cf:55:a9:
+    f5:8d:21:2f:30:6a:1f:64:7e:38:f0:5f:d1:89:3b:
+    27:a4:1d:fa:17:29:74:e5:74:63:e2:06:d0:53:07:
+    38:86:14:21:c0:49:c0:ed:1e:fc:c7:56:69:74:bb:
+    cf:fe:ef:4a:46:29:40:d8:1c:84:eb:65:ee:fe:10:
+    92:65:58:f4:07:3b:d1:b2:9f
+publicExponent: 65537 (0x10001)
+privateExponent:
+    00:ae:29:e7:b0:b1:e9:16:d9:ac:76:0d:f7:d3:8a:
+    2f:9a:04:38:5f:b4:9a:01:d4:b9:8f:ff:b6:14:21:
+    68:37:14:a7:97:18:74:57:f9:5e:e7:13:67:4f:a3:
+    21:e1:c4:9f:2d:dd:cc:36:82:be:2a:b6:53:fe:91:
+    4a:6d:24:fc:5f:90:15:a7:8c:72:31:bb:8c:03:6b:
+    37:58:15:ef:c1:dd:18:ff:c8:0c:d3:88:37:fe:0e:
+    50:d6:fe:56:73:2d:a1:ef:c4:9e:8a:0e:9b:a1:7a:
+    3d:bb:b8:ac:0f:55:92:92:43:25:f5:50:b5:27:d9:
+    c7:42:74:35:45:4a:17:01:d1
+prime1:
+    00:dc:6b:8d:a1:ec:5a:75:d0:49:80:9f:f3:61:35:
+    8d:d5:14:82:24:ea:26:f9:ef:85:d6:08:0e:d6:2e:
+    7a:89:6c:36:3c:34:a2:2e:09:a8:c5:43:01:fb:00:
+    3e:10:f1:dc:3d:88:72:e8:26:b7:87:2f:de:dc:06:
+    c0:03:64:4b:0d
+prime2:
+    00:cb:e7:74:79:95:8e:87:34:0a:54:6a:b6:58:ed:
+    1c:43:20:59:db:25:ec:94:d4:7d:d1:07:7e:63:58:
+    13:c8:5b:f8:47:91:58:be:6a:0c:c8:da:99:3e:91:
+    b6:3f:c9:94:03:7e:b1:8f:7b:e6:3e:19:e8:2e:a9:
+    f8:7a:81:d9:5b
+exponent1:
+    5e:72:af:a3:bc:95:1e:7a:7b:a4:63:e5:73:b7:f0:
+    e8:66:fb:45:3a:18:2d:6c:97:1a:99:25:52:5d:64:
+    20:52:80:02:d8:42:ce:1b:51:78:05:38:6a:07:36:
+    91:28:31:c9:24:18:a8:a5:3e:6a:ec:f6:3f:ad:9c:
+    c5:57:4a:59
+exponent2:
+    78:ee:b4:58:ec:07:95:4e:9b:15:c8:18:90:13:48:
+    e0:d3:0e:17:f8:9d:21:04:09:fe:f0:57:d8:69:c3:
+    89:e0:6a:17:60:2f:e6:f7:14:d0:07:3e:3e:2a:c3:
+    91:7f:67:86:cf:1c:56:42:20:a3:12:50:6f:64:a5:
+    97:5a:ed:e3
+coefficient:
+    0e:62:69:36:fe:f5:88:b2:40:25:77:0c:09:3d:a4:
+    2b:f6:0d:1a:73:10:bf:6b:4b:f2:65:ac:ef:cc:48:
+    10:7a:27:93:41:17:a4:9d:fa:66:76:16:5d:a3:05:
+    f0:17:30:e0:6f:6b:44:d1:3c:b1:ee:9a:fb:e4:54:
+    9d:4d:09:54
+```
+
+## Public Key Structure
+
+Let's look at the public key format:
+```sh
+❯ cat publickey.pem
+
+-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCvkJKln1CjL4IvLqL502w+7B/c
+5WV3VAzGxpcDxSxlAtZ1CrNB8i6zrKx6vLZQpvVi2IeYzIW2Gc9VqfWNIS8wah9k
+fjjwX9GJOyekHfoXKXTldGPiBtBTBziGFCHAScDtHvzHVml0u8/+70pGKUDYHITr
+Ze7+EJJlWPQHO9GynwIDAQAB
+-----END PUBLIC KEY-----
+```
+
+Parsing the `ASN.1` structure of the public key:
+```sh
+❯ openssl asn1parse -in publickey.pem
+
+    0:d=0  hl=3 l= 159 cons: SEQUENCE
+    3:d=1  hl=2 l=  13 cons: SEQUENCE
+    5:d=2  hl=2 l=   9 prim: OBJECT            :rsaEncryption
+   16:d=2  hl=2 l=   0 prim: NULL
+   18:d=1  hl=3 l= 141 prim: BIT STRING
+```
+
+At offset 18 is a `BIT STRING` containing the RSA key itself (`n` and `e`). Let's parse it:
+```sh
+❯ openssl asn1parse -in publickey.pem --strparse 18
+
+    0:d=0  hl=3 l= 137 cons: SEQUENCE
+    3:d=1  hl=3 l= 129 prim: INTEGER           :AF9092A59F50A32F822F2EA2F9D36C3EEC1FDCE56577540CC6C69703C52C6502D6750AB341F22EB3ACAC7ABCB650A6F562D88798CC85B619CF55A9F58D212F306A1F647E38F05FD1893B27A41DFA172974E57463E206D0530738861421C049C0ED1EFCC7566974BBCFFEEF4A462940D81C84EB65EEFE10926558F4073BD1B29F
+  135:d=1  hl=2 l=   3 prim: INTEGER           :010001
+```
+
+The public key is a "stripped-down" version of the private key.
+It contains only the data necessary for the sender to encrypt:
+* `INTEGER 0xAF90..B29F` - Modulus `n` (same as in the private key)
+* `INTEGER 0x010001` - Public Exponent `e = 65537` (0x010001)
+
+To quickly check the public key parameters, use the `-pubin flag.
+```sh
+❯ openssl rsa -text -in publickey.pem -pubin -noout
+
+Public-Key: (1024 bit)
+Modulus:
+    00:af:90:92:a5:9f:50:a3:2f:82:2f:2e:a2:f9:d3:
+    6c:3e:ec:1f:dc:e5:65:77:54:0c:c6:c6:97:03:c5:
+    2c:65:02:d6:75:0a:b3:41:f2:2e:b3:ac:ac:7a:bc:
+    b6:50:a6:f5:62:d8:87:98:cc:85:b6:19:cf:55:a9:
+    f5:8d:21:2f:30:6a:1f:64:7e:38:f0:5f:d1:89:3b:
+    27:a4:1d:fa:17:29:74:e5:74:63:e2:06:d0:53:07:
+    38:86:14:21:c0:49:c0:ed:1e:fc:c7:56:69:74:bb:
+    cf:fe:ef:4a:46:29:40:d8:1c:84:eb:65:ee:fe:10:
+    92:65:58:f4:07:3b:d1:b2:9f
+Exponent: 65537 (0x10001)
+```
+
+## Encryption
+
+Create a small text file with a secret message:
+```sh
+❯ echo "Encrypt this message using OpenSSL now" > message.txt
+```
+
+Encrypt the file using the public key:
+```sh
+❯ openssl pkeyutl -encrypt -pubin -inkey publickey.pem -in message.txt -out message.rsa
+```
+OpenSSL calculates the ciphertext using the formula `c = m^e mod n`.
+
+Inspect the encrypted data:
+```sh
+❯ cat message.rsa | xxd
+
+00000000: 25df fa6b f9f9 de6f ed0c 62c6 48d7 2ac5  %..k...o..b.H.*.
+00000010: 5b76 4c2b be89 b847 8852 f3f2 1b93 c6e6  [vL+...G.R......
+00000020: fdaa f727 13a3 acd9 faa2 830d 548d bc34  ...'........T..4
+00000030: b052 5482 4c59 fea6 5bea fa72 7da1 f740  .RT.LY..[..r}..@
+00000040: 812e c2ee bf24 c74e 92ea 85af 3641 7d0e  .....$.N....6A}.
+00000050: cbc9 ef22 6366 767e 3dec 4759 0511 3ba7  ..."cfv~=.GY..;.
+00000060: b99a 8de8 4f80 9366 d550 efb3 c67b 6119  ....O..f.P...{a.
+00000070: a16f b5f8 9ebc a5e1 1cbb 9000 2822 b032  .o..........(".2
+```
+The size of the encrypted data equals the modulus length (1024 bits = 128 bytes).
+Note: RSA can only encrypt data smaller than the modulus.
+
+## Decryption
+
+To restore the original text, the private key is required:
+```sh
+❯ openssl pkeyutl -decrypt -inkey privatekey.pem -in message.rsa -out message.dec
+```
+OpenSSL calculates the original text using the formula `m = c^d mod n`.
+
+Verify the result:
+```sh
+❯ cat message.dec
+
+Encrypt this message using OpenSSL now
+```

@@ -1,0 +1,33 @@
+❯ go run ./main.go
+Welcome to Unpwnable shop!
+***Now with support for abnormally long usernames!!1!***
+To continue insert your name (don't even think about overwriting some return addresses, you can't lmao) :
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` Welcome to the shop aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+
+
+ █    ██  ███▄    █  ██▓███   █     █░███▄    █  ▄▄▄       ▄▄▄▄    ██▓    ▓█████      ██████  ██░ ██  ▒█████   ██▓███
+ ██  ▓██▒ ██ ▀█   █ ▓██░  ██▒▓█░ █ ░█░██ ▀█   █ ▒████▄    ▓█████▄ ▓██▒    ▓█   ▀    ▒██    ▒ ▓██░ ██▒▒██▒  ██▒▓██░  ██▒
+▓██  ▒██░▓██  ▀█ ██▒▓██░ ██▓▒▒█░ █ ░█▓██  ▀█ ██▒▒██  ▀█▄  ▒██▒ ▄██▒██░    ▒███      ░ ▓██▄   ▒██▀▀██░▒██░  ██▒▓██░ ██▓▒
+▓▓█  ░██░▓██▒  ▐▌██▒▒██▄█▓▒ ▒░█░ █ ░█▓██▒  ▐▌██▒░██▄▄▄▄██ ▒██░█▀  ▒██░    ▒▓█  ▄      ▒   ██▒░▓█ ░██ ▒██   ██░▒██▄█▓▒ ▒
+▒▒█████▓ ▒██░   ▓██░▒██▒ ░  ░░░██▒██▓▒██░   ▓██░ ▓█   ▓██▒░▓█  ▀█▓░██████▒░▒████▒   ▒██████▒▒░▓█▒░██▓░ ████▓▒░▒██▒ ░  ░
+░▒▓▒ ▒ ▒ ░ ▒░   ▒ ▒ ▒▓▒░ ░  ░░ ▓░▒ ▒ ░ ▒░   ▒ ▒  ▒▒   ▓▒█░░▒▓███▀▒░ ▒░▓  ░░░ ▒░ ░   ▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ▒░▒░▒░ ▒▓▒░ ░  ░
+░░▒░ ░ ░ ░ ░░   ░ ▒░░▒ ░       ▒ ░ ░ ░ ░░   ░ ▒░  ▒   ▒▒ ░▒░▒   ░ ░ ░ ▒  ░ ░ ░  ░   ░ ░▒  ░ ░ ▒ ░▒░ ░  ░ ▒ ▒░ ░▒ ░
+ ░░░ ░ ░    ░   ░ ░ ░░         ░   ░    ░   ░ ░   ░   ▒    ░    ░   ░ ░      ░      ░  ░  ░   ░  ░░ ░░ ░ ░ ▒  ░░
+   ░              ░              ░            ░       ░  ░ ░          ░  ░   ░  ░         ░   ░  ░  ░    ░ ░
+                                                                ░
+
+
+
+
+Market menu:
+[0] Exit
+[1] Buy amazing stuff
+69
+finding stuff to sell...
+What was your name again? I forgot it.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`e/@
+
+Ok, just hold on while i finish searching.
+didn't find anything :(
+Bye!
+cat flag.txt
+pascalCTF{N0O0o0o@O0_Hòw_D1D_Y0U_D0_17}%

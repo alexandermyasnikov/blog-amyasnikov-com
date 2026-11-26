@@ -1,0 +1,96 @@
+---
+title: "How to Intercept and Decrypt TLS Traffic from curl"
+description: "Capturing HTTPS requests from curl with tcpdump and decrypting them in Wireshark using TLS session keys from SSLKEYLOGFILE — without changing the curl command itself."
+pubDatetime: 2025-03-26
+tags:
+    - network
+    - TLS
+    - cURL
+    - wireshark
+    - tcpdump
+---
+
+import { Image } from 'astro:assets';
+import wireshark1Png from '../assets/how-to-intercept-and-decrypt-curl-tls-traffic/wireshark-1.png';
+import wireshark2Png from '../assets/how-to-intercept-and-decrypt-curl-tls-traffic/wireshark-2.png';
+import wireshark3Png from '../assets/how-to-intercept-and-decrypt-curl-tls-traffic/wireshark-3.png';
+
+
+## How to Intercept and Decrypt TLS Traffic from curl?
+
+### Goal
+
+Sometimes, for debugging purposes, you may want to inspect the contents of HTTPS traffic.
+For example, a client uses `cURL` to communicate with a public API server.
+But sometimes something goes wrong. The client doesn’t receive a response, even though the server logs show the request was successfully processed and a response was sent. It seems something is getting lost among various proxies and subnets.
+In such cases, you can try capturing network activity between the client and the service at different points, decrypt the data, match the requests and responses, and check whether anything was lost.
+
+The `curl` command supports the `SSLKEYLOGFILE` environment variable, which specifies the filename where TLS session keys will be written.
+
+### Intercepting and Decoding Traffic
+
+Let’s walk through a small example.
+The client uses curl to make requests to a web server using a secure connection.
+
+We’ll capture the network traffic using `tcpdump` and analyze and decrypt it using `wireshark`.
+
+Example script:
+```bash
+#!/bin/bash
+
+export SSLKEYLOGFILE=./sslkeys.txt
+
+TCPDUMP_FILE_PID=/tmp/tcpdump.pid
+
+tcpdump -i any -w ./capture.pcap "tcp port 443" &
+echo $! >$TCPDUMP_FILE_PID
+sleep 1
+
+curl -s "https://amyasnikov.com/posts/" >/dev/null
+sleep 1
+curl -s "https://amyasnikov.com/tags/" >/dev/null
+
+sleep 1
+kill -2 $(cat $TCPDUMP_FILE_PID)
+```
+
+Run the script:
+```bash
+[amyasnikov@ubuntu:~]$ bash ./script.sh
+
+tcpdump: data link type LINUX_SLL2
+tcpdump: listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+82 packets captured
+82 packets received by filter
+0 packets dropped by kernel
+```
+
+Check if keys were written to sslkeys.txt:
+```text
+SERVER_HANDSHAKE_TRAFFIC_SECRET 033cb348c1310701e54b6f7291058ccf07e41dce5010546f0080c068587bed37 84f676fcf546c4c12507885485d3841cf9705b158c39e7b90052bb255fcbd00b
+EXPORTER_SECRET 033cb348c1310701e54b6f7291058ccf07e41dce5010546f0080c068587bed37 82bd785b4b1165dce6ed95629c01b1d7106f6eb3f612d3e272d015255bd1d88e
+SERVER_TRAFFIC_SECRET_0 033cb348c1310701e54b6f7291058ccf07e41dce5010546f0080c068587bed37 61499a7a12af2e0d29b76fa825c1d0ed20bb83994b0bdfe05ea5529203d5ed97
+CLIENT_HANDSHAKE_TRAFFIC_SECRET 033cb348c1310701e54b6f7291058ccf07e41dce5010546f0080c068587bed37 527cd45a5a780d5e9c46f3d502bc9bcd8f291041f3e5b8b27a98143d356dbaba
+CLIENT_TRAFFIC_SECRET_0 033cb348c1310701e54b6f7291058ccf07e41dce5010546f0080c068587bed37 8b2e86dd8f587b1be03b0d44eae5e0ad9be3ca3fb4dc83501e749e7ce675f097
+SERVER_HANDSHAKE_TRAFFIC_SECRET 7c3bbd5f515b905aadceeca189f9f1dcdd5eace6b9eff376ff6f2d250c95749a 2a47038b2e6a7fb39a92c3da9f33219ce3c97e4f2f8c6a6e20b4e12f5449a962
+EXPORTER_SECRET 7c3bbd5f515b905aadceeca189f9f1dcdd5eace6b9eff376ff6f2d250c95749a 4d73ef515b8b2ab6806135c061f2b497e9abcccb3787be14e938da984a0ab41a
+SERVER_TRAFFIC_SECRET_0 7c3bbd5f515b905aadceeca189f9f1dcdd5eace6b9eff376ff6f2d250c95749a 789f61f6234bbda5f0253a792343ed656355797eba609dcd117b94e5031a131f
+CLIENT_HANDSHAKE_TRAFFIC_SECRET 7c3bbd5f515b905aadceeca189f9f1dcdd5eace6b9eff376ff6f2d250c95749a 618530661d160671244b112b319241786dea8a9d11ce572e8a69631c9a5a4f5a
+CLIENT_TRAFFIC_SECRET_0 7c3bbd5f515b905aadceeca189f9f1dcdd5eace6b9eff376ff6f2d250c95749a 953d9d633f42bd42379ab6550de1aad45e4fda2dc04abed50fcb2719cee19bc5
+```
+
+Perfect. We now have all the necessary data.
+Next, open the packet capture in `Wireshark` and specify the `sslkeys.txt` file under `Preferences -> Protocols -> TLS -> (Pre)-Master-Secret log filename`.
+
+### How Decrypted Traffic Looks in Wireshark
+
+<Image src={wireshark1Png} alt="Display of all packets" />
+
+<Image src={wireshark2Png} alt="Decoded HTTP request" />
+
+<Image src={wireshark3Png} alt="HTTP traffic stream" />
+
+### Conclusion
+To decrypt curl requests, it’s enough to set the `SSLKEYLOGFILE` environment variable — no need to modify the actual `cURL` command.
+
+This method is not universal. On macOS, it didn’t work — the file specified in `SSLKEYLOGFILE` was created but remained empty.

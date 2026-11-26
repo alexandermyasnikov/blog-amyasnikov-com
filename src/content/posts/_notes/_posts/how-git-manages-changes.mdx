@@ -1,0 +1,387 @@
+---
+title: "How Git Manages Changes"
+description: "How Git stores data as content-addressed objects: reading refs and HEAD, computing object hashes, inspecting commits and trees, diffing blobs, tracking the index, and telling lightweight tags from annotated ones."
+pubDatetime: 2025-11-13
+tags:
+    - git
+    - question
+---
+
+## How Git Manages Changes
+
+`Git` is a content-addressable storage system: all data is stored as objects inside the `.git` directory.
+Each object in Git has its hash, which is used for identification.
+
+Let's see how common commands use Git's structure to perform various operations.
+
+We will experiment on the `httpexpect` repository at tag `v2.16.0`.
+## How to Find Which Commit a Branch Points To
+
+The commit hash that a branch points to is stored in `.git/refs/heads/<branch>`:
+```sh
+❯ cat .git/refs/heads/master
+
+9be446356b6eddc852a20b420cbf19c3c53acca3
+```
+
+Verify with Git:
+```sh
+❯ git rev-parse master
+
+9be446356b6eddc852a20b420cbf19c3c53acca3
+```
+
+
+## How to Find Which Commit a Tag Points To
+
+The commit hash that a tag points to is stored in `.git/refs/tags/<tag>`.
+For example:
+```sh
+❯ cat .git/refs/tags/v2.16.0
+
+e6879c0c3e358e8400f3fc5e9677a48ceb661740
+```
+
+Verify with Git:
+```sh
+❯ git rev-parse v2.16.0
+
+e6879c0c3e358e8400f3fc5e9677a48ceb661740
+```
+
+
+## How to Know Which Commit We Are On
+
+There is a special file `.git/HEAD` that contains a pointer to the current branch or commit.
+For example:
+```sh
+❯ cat .git/HEAD
+
+e6879c0c3e358e8400f3fc5e9677a48ceb661740
+```
+
+If we switch to the master branch, HEAD looks like this:
+```sh
+❯ cat .git/HEAD
+
+ref: refs/heads/master
+```
+
+
+## How Git Computes Object Hashes
+
+All objects in `Git` are immutable and stored in `.git/objects.`
+Each object's name is a hash computed from its content.
+
+Objects are stored in the compressed format `<type> <size>\0<content>`, where type can be:
+* `blob` - file content
+* `tree` - list of files and directories
+* `commit` - snapshot of the project with metadata
+* `tag` - annotated tag with metadata
+
+Compute the hash for the existing file `formatter.go`:
+```sh
+❯ {
+ echo -n "blob "
+ echo -n $(cat formatter.go | wc -c)
+ echo -ne "\0"
+ cat formatter.go
+} | sha1
+
+02985f31c63a87435b23c9cdaa4837b355300446
+```
+
+Verify the object exists and hashes match:
+```sh
+❯ cat .git/objects/02/985f31c63a87435b23c9cdaa4837b355300446 | perl -MCompress::Zlib -0777 -e 'print uncompress <>' | sha1
+
+02985f31c63a87435b23c9cdaa4837b355300446
+```
+
+
+## How to Get Commit Information
+
+Currently, HEAD points to commit `e6879c0c3e358e8400f3fc5e9677a48ceb661740`.
+Let's find the object with this hash and inspect its structure:
+```sh
+❯ cat .git/objects/e6/879c0c3e358e8400f3fc5e9677a48ceb661740 | perl -MCompress::Zlib -0777 -e 'print uncompress <>' | tr '\0' '\n'
+
+commit 234
+tree c2635674529d78a11624302cc23480a4d00e6984
+parent 420f3aeeaa0c45bfac885856ad24dd9c2569d14b
+author Victor Gaydov <victor@enise.org> 1696324180 +0400
+committer Victor Gaydov <victor@enise.org> 1696324220 +0400
+
+Refine colorhttp func
+```
+
+Explanation:
+* `commit` – object type.
+* `tree` – pointer to the file tree at the time of the commit.
+* `parent` – previous commit, needed for tracking project history.
+* `author` – commit author and date.
+* `committer` – the person who applied the commit and date.
+* `Then` comes the commit message.
+
+Verify with Git command:
+```sh
+❯ git log -1 e6879c0c3e358e8400f3fc5e9677a48ceb661740
+
+commit e6879c0c3e358e8400f3fc5e9677a48ceb661740 (HEAD, tag: v2.16.0, origin/v2)
+Author: Victor Gaydov <victor@enise.org>
+Date:   2023-10-03 13:09:40 +0400
+
+    Refine colorhttp func
+```
+
+`git log` gives a nicer format, but all information is present.
+
+
+## How to Find All Branches/Tags Pointing to a Commit
+
+Check all files in `.git/refs` (and `.git/HEAD`) and compare hashes.
+If hashes match, the filename/path contains the branch/tag name:
+```sh
+❯ grep -rl "e6879c0c3e358e8400f3fc5e9677a48ceb661740" .git/refs .git/HEAD
+
+.git/refs/tags/v2.16.0
+.git/refs/remotes/origin/v2
+.git/HEAD
+```
+
+
+## How to Get a List of Files in a Commit Snapshot
+
+Let's see which files existed at the time of commit `e6879c0c3e358e8400f3fc5e9677a48ceb661740`.
+The file tree for this commit is in object `c2635674529d78a11624302cc23480a4d00e6984`.
+
+The file contains hashes in binary format, so to display them nicely:
+```sh
+❯ cat .git/objects/c2/635674529d78a11624302cc23480a4d00e6984 | perl -MCompress::Zlib -0777 -e '
+    $_ = uncompress(<STDIN>);
+    s/^tree \d+\0//;
+    while (/(.*?)\0(.{20})/sg) {
+      my ($header, $sha) = ($1, $2);
+      $header =~ /^(\d+) (.*)$/;
+      my $hex = unpack("H*", $sha);
+      print "$1\t$hex\t$2\n";
+    }
+  '
+
+40000	d3f3c0e53b33d211697bea88a56f7e62deb6d115	.github
+100644	6bcd33c7f8945c6526bc2b3442fc591946448eff	.gitignore
+100644	4f0aa540e6980fd3fe27f6921b923541a9b5f469	.golangci.yml
+100644	f4e3cec654057e6b7d011f9d004fc17e412393d4	.ignore
+100644	da361dcc087c3d081a5ceae48ae064f2e6df9260	.spelling
+100644	c72b02ee8e98654ae8b92732a0c8429a17e1ba51	HACKING.md
+100644	a022050415f901d9e2bb76880f7e14a879c70404	LICENSE
+100644	6f31bfaa909a0f435076e73140b029e49750428b	Makefile
+100644	6a9971e0d3ae6df648ac98e61deb32d0e8d9ebd8	README.md
+40000	7ccc58aa1fb590b1f94a3279c48b1b6b706ef46d	_examples
+40000	b8eeb9c418ccc558c14b1fe3da6fac0ce3cd5234	_images
+100644	c1314d2f943727a232fd6eefe442132374653ccd	array.go
+100644	bde4500abf7dcc8c6bc5f425aac33a8bf0a3816c	array_test.go
+100644	d8dcb77078e1fa667793adb5096f180c42e21210	assertion.go
+100644	17c863cbc3e9f82ae39158eb1a8c859ed54cf9f9	assertion_test.go
+100644	0880e663ddaff0cd07664a080682e9f2bb07b7b2	assertion_validation.go
+100644	0b0a6ddd1667bcf0b71c1bc1a8b0d233c1da744d	assertionseverity_string.go
+100644	9ed2e4f0749aa8aaa54813624c41fe3b4b2022b4	assertiontype_string.go
+100644	f1b3d171938aa8ba1b69141388519c1cb35763b1	binder.go
+... and other changes
+```
+
+To verify, you can use `git cat-file -p c2635674529d78a11624302cc23480a4d00e6984`.
+
+Or use `git ls-tree` to list files:
+```sh
+❯ git ls-tree -r e6879c0c3e358e8400f3fc5e9677a48ceb661740
+100644 blob d276992856053ee54e26f7bd1fbe237ad1e08db6	.github/FUNDING.yml
+100644 blob dd2452e4e151b3bd3cea38918d66153561ecf68a	.github/workflows/build.yaml
+100644 blob 25e11982853085f09bc1c6161bab7b793ff48873	.github/workflows/detect_conflicts.yml
+100644 blob 6bcd33c7f8945c6526bc2b3442fc591946448eff	.gitignore
+100644 blob 4f0aa540e6980fd3fe27f6921b923541a9b5f469	.golangci.yml
+100644 blob f4e3cec654057e6b7d011f9d004fc17e412393d4	.ignore
+100644 blob da361dcc087c3d081a5ceae48ae064f2e6df9260	.spelling
+100644 blob c72b02ee8e98654ae8b92732a0c8429a17e1ba51	HACKING.md
+100644 blob a022050415f901d9e2bb76880f7e14a879c70404	LICENSE
+100644 blob 6f31bfaa909a0f435076e73140b029e49750428b	Makefile
+100644 blob 6a9971e0d3ae6df648ac98e61deb32d0e8d9ebd8	README.md
+100644 blob 5812292bb2a4d0db578a4a2eb9740549585de472	_examples/.golangci.yml
+100644 blob 0ce3624bfde7c2531957bbf752ed3ca0dfea6f70	_examples/doc.go
+100644 blob d70ab083953bf89ae9d0314f273e63c37efd6abd	_examples/echo.go
+100644 blob 548c51cfc20ac67bac5d19636eaf2beb0991c0f0	_examples/echo_test.go
+100644 blob f2ab214fe185e1d93235d15852e2609d4bff34a5	_examples/fasthttp.go
+100644 blob fefacee3dbb47ab5a5f74adaf9cd282d13dfe347	_examples/fasthttp_test.go
+100644 blob fa15533fd7ea55ccc41717eff0ab3804e7439f6c	_examples/formatter_test.go
+... and other changes
+```
+
+The only difference is that `git ls-tree` displays only a list of files.
+We have displayed a list of files and directories located in the root directory.
+To get all the files, you just need to recursively go through all the directories in the same way.
+
+The structure of the objects is clear, so for brevity, we will use `git cat-file`.
+
+
+## How to Find Files Changed in a Commit
+
+To do this, you need to compare the file trees of the previous commit with the file tree of the current commit.
+From the parent field `420f3aeeaa0c45bfac885856ad24dd9c2569d14b`, we get the parent commit tree - `d4259cdf526369da146cf6195148e2309a9a08c6`
+
+We compare the trees using the `git diff` command and see that the contents of the `formatter.go` file have changed:
+```diff
+❯ git diff --text --no-index <(git cat-file -p d4259cdf526369da146cf6195148e2309a9a08c6) <(git cat-file -p c2635674529d78a11624302cc23480a4d00e6984) | cat
+
+diff --git a/dev/fd/13 b/dev/fd/15
+--- a/dev/fd/13
++++ b/dev/fd/15
+@@ -38,7 +38,7 @@
+ 100644 blob 585a0a1b341ddc9baebf6868f932b4c17f08fd5e	expect_test.go
+-100644 blob 7b8439619f48224b440dda08c3058a1ce9bafe3d	formatter.go
++100644 blob 02985f31c63a87435b23c9cdaa4837b355300446	formatter.go
+ 100644 blob a78d1d2555fcb3486a95fc2e2439a750243efdde	formatter_test.go
+ ```
+
+
+## How to See What Changed in a File
+
+Compare two blob objects:
+```diff
+❯ git diff --text --no-index <(git cat-file -p 7b8439619f48224b440dda08c3058a1ce9bafe3d) <(git cat-file -p 02985f31c63a87435b23c9cdaa4837b355300446) | cat
+
+diff --git a/dev/fd/13 b/dev/fd/15
+--- a/dev/fd/13
++++ b/dev/fd/15
+@@ -1009,93 +1009,67 @@ var defaultTemplateFuncs = template.FuncMap{
+ 	},
+-	"colorhttp": func(enable bool, colorName string, isResponse bool, input string) string {
++	"colorhttp": func(enable bool, isResponse bool, input string) string {
+ 		if !enable {
+
+... and other changes
+```
+
+To verify this, we run `git log -p` and see that these were indeed the changes made:
+```diff
+❯ git log -p | head -n 20
+
+commit e6879c0c3e358e8400f3fc5e9677a48ceb661740
+Author: Victor Gaydov <victor@enise.org>
+Date:   2023-10-03 13:09:40 +0400
+
+    Refine colorhttp func
+
+diff --git a/formatter.go b/formatter.go
+index 7b84396..02985f3 100644
+--- a/formatter.go
++++ b/formatter.go
+@@ -1009,93 +1009,67 @@ var defaultTemplateFuncs = template.FuncMap{
+ 		}
+ 		return color.New(colorAttr).Sprint(input)
+ 	},
+-	"colorhttp": func(enable bool, colorName string, isResponse bool, input string) string {
++	"colorhttp": func(enable bool, isResponse bool, input string) string {
+ 		if !enable {
+ 			return input
+ 		}
+
+```
+
+
+## How Git Tracks Indexed Files
+
+Make a small change in `chain_test.go` and add it to the index.
+
+Compare .git/index with a previous copy:
+```diff
+❯ git diff --text --no-index <(xxd /tmp/old_index) <(xxd ./.git/index) | cat
+
+diff --git a/dev/fd/13 b/dev/fd/15
+--- a/dev/fd/13
++++ b/dev/fd/15
+@@ -258,10 +258,10 @@
+ 00001010: 21a3 f429 0000 81a4 0000 01f5 0000 0000  !..)............
+ 00001020: 0000 31e0 94fc 11ee 2e63 9aac 4d09 5213  ..1......c..M.R.
+ 00001030: f026 b4e7 44ab 4656 0008 6368 6169 6e2e  .&..D.FV..chain.
+-00001040: 676f 0000 6916 3bed 26c1 a7a8 6916 3bed  go..i.;.&...i.;.
+-00001050: 26c1 a7a8 0100 0010 21a4 f54d 0000 81a4  &.......!..M....
+-00001060: 0000 01f5 0000 0000 0000 53a3 b767 65b3  ..........S..ge.
+-00001070: 3d7f ae0f 59fc 10e2 423c e7ea 4581 16bc  =...Y...B<..E...
++00001040: 676f 0000 6916 3c31 000d 44d6 6916 3c30  go..i.<1..D.i.<0
++00001050: 3b60 3632 0100 0010 21a4 f54d 0000 81a4  ;`62....!..M....
++00001060: 0000 01f5 0000 0000 0000 53a6 d0bd f288  ..........S.....
++00001070: e37d 62c7 7e6c 2ea6 3254 8044 2b46 a941  .}b.~l..2T.D+F.A
+ 00001080: 000d 6368 6169 6e5f 7465 7374 2e67 6f00  ..chain_test.go.
+ 00001090: 0000 0000 6916 2983 3712 b6d4 6916 2983  ....i.).7...i.).
+ 000010a0: 3712 b6d4 0100 0010 21a3 f42a 0000 81a4  7.......!..*....
+```
+
+I don't know how to make it clearer, but here you can see that the hash has changed from `b76765b33d7fae0f59fc10e2423ce7ea458116bc` to `d0bdf288e37d62c77e6c2ea6325480442b46a941`.
+Let's compare the files with these hashes:
+```diff
+❯ git diff --text --no-index <(git cat-file -p b76765b33d7fae0f59fc10e2423ce7ea458116bc) <(git cat-file -p d0bdf288e37d62c77e6c2ea6325480442b46a941) | cat
+diff --git a/dev/fd/13 b/dev/fd/15
+--- a/dev/fd/13
++++ b/dev/fd/15
+@@ -822,7 +822,7 @@ func TestChain_TestingTB(t *testing.T) {
+ 			want: true,
+ 		},
+ 		{
+-			name: "AssertReporter",
++			name: "AssertReporterNew",
+ 			args: args{
+ 				handler: &DefaultAssertionHandler{
+ 					Formatter: newMockFormatter(t),
+```
+
+The changed hash corresponds to the updated file, which `git diff HEAD` also shows.
+```diff
+❯ git diff HEAD | cat
+diff --git a/chain_test.go b/chain_test.go
+index b76765b..d0bdf28 100644
+--- a/chain_test.go
++++ b/chain_test.go
+@@ -822,7 +822,7 @@ func TestChain_TestingTB(t *testing.T) {
+ 			want: true,
+ 		},
+ 		{
+-			name: "AssertReporter",
++			name: "AssertReporterNew",
+ 			args: args{
+ 				handler: &DefaultAssertionHandler{
+ 					Formatter: newMockFormatter(t),
+```
+
+
+## Difference Between Lightweight and Annotated Tags
+
+A lightweight tag is just a pointer to a commit:
+```sh
+❯ cat .git/refs/tags/v2.16.0
+
+e6879c0c3e358e8400f3fc5e9677a48ceb661740
+```
+
+Let's create an annotated tag with the command `git tag -a v2.16.0-1 -m “version v2.16.0-1”` and see what it points to:
+```sh
+❯ cat .git/refs/tags/v2.16.0-1
+
+fd8a701b59285ffd3b143cf7973ae2ba67b1f9fd
+```
+
+An annotated tag is a new object of type `tag` that contains metadata and a pointer to commit `e6879c0c3e358e8400f3fc5e9677a48ceb661740`:
+```sh
+❯ cat .git/objects/fd/8a701b59285ffd3b143cf7973ae2ba67b1f9fd | perl -MCompress::Zlib -0777 -e 'print uncompress <>' | tr '\0' '\n'
+
+tag 171
+object e6879c0c3e358e8400f3fc5e9677a48ceb661740
+type commit
+tag v2.16.0-1
+tagger Alexander Myasnikov <myasnikov.alexander.s@gmail.com> 1763062383 +0300
+
+version v2.16.0-1
+```
+
+
+## Useful Links
+* [ProGit v2 Book](https://git-scm.com/book/en/v2)

@@ -1,0 +1,108 @@
+---
+title: "Julia Set Fractals — Graphics with Ebiten in Go"
+description: "Rendering Julia set fractals in Go with the Ebiten 2D graphics library: computing point colors from iteration counts, navigating the image with the keyboard, and saving high-resolution snapshots."
+pubDatetime: 2025-05-10
+tags:
+    - math
+    - Julia Set
+    - Golang
+    - Ebiten
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import { Image } from 'astro:assets';
+import juliaSet1Webp from '../assets/julia-set-ebiten/julia-set-1.webp';
+import juliaSet2Webp from '../assets/julia-set-ebiten/julia-set-2.webp';
+import juliaSet3Webp from '../assets/julia-set-ebiten/julia-set-3.webp';
+
+
+## Ebiten Library
+
+Sometimes you need to visually represent some simulation or process.
+The main requirements are support for the `Go` language, since calculations are done in `Go`, and ease of use.
+
+Let's look at `ebiten`, one of the most popular libraries for working with graphics.
+The main use of `ebiten` is creating interactive 2D games.
+
+We will use the library to draw some dynamic process.
+
+
+
+## Julia Set
+
+As an example, let's try to draw the Julia set.
+
+The Julia set is described by the equation
+\(
+J(f) = \left\{ z \in \mathbb{C} \mid \lim_{n \to \infty} |f^n(z)| \neq +\infty \right\}
+\)
+
+where $ f(x) = z^2 + c, c \in \mathbb{C} $
+
+For each point in the given region, find the iteration number at which the point begins to "escape" to infinity.
+
+We won't go deep into theory, as the main topic here is graphical capabilities.
+
+
+
+## Go Program
+
+The main logic for calculating the color of points:
+
+<CodeFile file="generate-points.go" />
+
+I’m not sure how exactly the color of a point should depend on the number of iterations.
+Since beautiful visualization is more important than mathematical accuracy here, I settled on this approach.
+
+
+
+Implementation of the Game interface for use with `ebiten`:
+
+<CodeFile file="game.go" />
+
+
+
+Keyboard controls:
+
+<CodeFile file="handle-input.go" />
+
+It seemed to me that mapping points from one rectangular area to another rectangular area
+is easiest when fixing the center of this area and the distances to the edges.
+Then all operations of resizing, moving, and rendering are implemented very simply.
+
+
+
+Saving a snapshot:
+
+<CodeFile file="save-image.go" />
+
+
+
+Full code:
+
+<CodeFile file="main.go" />
+
+
+
+## Screenshots
+
+<Image src={juliaSet1Webp} alt="Blue Julia set fractal with bright green spiral centers" />
+
+<Image src={juliaSet2Webp} alt="Orange Julia set fractal with cyan branching details" />
+
+<Image src={juliaSet3Webp} alt="Red Julia set fractal with glowing fractal spirals" />
+
+
+
+## Video
+
+The Julia set changes as the parameter c in the equation changes.
+
+[Watch the video on YouTube](https://www.youtube.com/watch?v=xol5e5jsCrY)
+
+
+
+
+## Links
+
+[Julia Set - Sounce Code on GitHub](https://github.com/alexandermyasnikov/julia-set-demo)
