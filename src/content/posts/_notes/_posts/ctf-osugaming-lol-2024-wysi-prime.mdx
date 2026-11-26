@@ -1,0 +1,60 @@
+---
+title: Wysi Prime — osu!gaming CTF 2024
+description: "Recovering RSA primes made only of the digits 2 and 7 with a breadth-first search, then decrypting the ciphertext in the crypto/wysi-prime challenge from osu!gaming CTF 2024."
+pubDatetime: 2024-04-12
+tags:
+    - CTF
+    - cryptography
+    - osugaming.lol
+    - Python
+    - breadth-first search
+    - RSA
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import wysiPrimeZip from '../assets/ctf-osugaming-lol-2024-wysi-prime/wysi-prime.zip?url';
+
+
+## Initial Data
+
+**Task link**
+[crypto/wysi-prime](https://ctf.osugaming.lol/challs)
+
+**Files**
+<a href={wysiPrimeZip}>Download wysi-prime.zip</a>
+
+## Solution
+
+### Input Analysis
+
+Let's look at what `server.py` contains:
+
+<CodeFile file="script.py" />
+
+Contents of `output.txt`:
+
+<CodeFile file="output.log" />
+
+We need to find two prime numbers `p`, `q` consisting only of the digits `2` and `7`.
+
+### solve.py Script
+
+Obviously, if `p*q == n`, then `(p*q) % k == n % k` for any `k`.
+We use a breadth-first search to find the numbers `p` and `q`.
+Starting with `p=0` and `q=0`, we grow the numbers by prepending a digit `2` or `7` until we find a pair whose product equals `n`.
+
+Having found `p` and `q`, we compute the secret exponent and decrypt the message.
+
+Let's write the code:
+
+<CodeFile file="solve.py" />
+
+Run the script:
+
+<CodeFile file="solve-output.log" />
+
+## Links
+* [Breadth-first search](https://en.wikipedia.org/wiki/Breadth-first_search)
+
+## Conclusion
+* An elementary task. Strange that not so many teams solved it during the CTF

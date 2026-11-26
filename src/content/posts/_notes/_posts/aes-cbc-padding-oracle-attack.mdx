@@ -1,0 +1,360 @@
+---
+title: AES-CBC — Padding Oracle Attack
+description: "How to decrypt AES-CBC ciphertext without the key, and forge ciphertext that decrypts to chosen plaintext, by exploiting PKCS#7 padding-validation responses."
+pubDatetime: 2024-11-14
+tags:
+    - CTF
+    - cryptography
+    - pwn.college
+    - Python
+    - AES
+    - CBC
+    - Padding Oracle Attack
+    - PKCS#7
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import { Image } from 'astro:assets';
+import aesCbcWebp from '../assets/aes-cbc-padding-oracle-attack/aes-cbc.webp';
+
+
+## AES-CBC — Padding Oracle Attack
+
+A padding oracle attack is a cryptographic attack that exploits the padding mechanism in some encryption schemes, such as CBC (Cipher Block Chaining) with symmetric encryption like AES. It allows an attacker to decrypt or modify data without knowing the encryption key.
+
+With this attack you can:
+* Decrypt an encrypted message
+* Encrypt an arbitrary message
+
+## What do you need to use a Padding Oracle Attack?
+
+* The attacker must be able to:
+  * Modify the ciphertext.
+  * Send the modified ciphertext to the server.
+  * Receive responses to requests repeatedly.
+* The vulnerable system must:
+  * Use a block cipher in AES-CBC (Cipher Block Chaining) mode or a similar mode that requires data padding.
+  * Pad data with PKCS#7.
+  * Indicate, explicitly or implicitly, whether the padding is correct (this can be determined from an explicit error message, different error codes, different request execution times, a service failure, or other behavior)
+
+## How padding works and why it is needed
+
+AES is a block cipher, so to apply AES encryption/decryption a message must be split into blocks of a certain size. In other words, the message size must be a multiple of the block size.
+In general, we want to encrypt and decrypt messages of arbitrary size.
+
+Therefore we need to be able to add and remove padding at the end of the message so that its size becomes a multiple of the block size.
+
+The general scheme of applying padding during encryption:
+```c
+plaintext = get_plaintext()     // Got a message of a certain size
+                                // that we want to encrypt.
+plaintext = pad(plaintext)      // Added padding to the end of the message
+                                // so that its size is a multiple of the block size.
+ciphertext = encrypt(plaintext) // After encryption we got a ciphertext
+                                // whose size is a multiple of the block size.
+```
+
+The general scheme of applying padding during decryption:
+```c
+ciphertext = get_ciphertext()   // Got the message that we want to decrypt.
+                                // The size of ciphertext is a multiple of the block size.
+plaintext = encrypt(ciphertext) // After decryption we got text
+                                // whose size is a multiple of the block size
+                                // (and matches the size of ciphertext)
+plaintext = unpad(plaintext)    // Removed the padding from the end of the message
+                                // so that its size matches the original size
+                                // (before encryption was applied)
+```
+
+### How PKCS#7 works
+
+The required number of bytes is appended to the end of the message so that its size becomes a multiple of the block size.
+If the message size is already a multiple of the block size, a whole block is added.
+The value of the added bytes equals the number of added bytes.
+
+Examples
+```python
+"Hello World!1" -> "Hello World!12\x03\x03\x03"
+"Hello World!12" -> "Hello World!123\x02\x02"
+"Hello World!123" -> "Hello World!123\x01"
+"Hello World!1234" -> "Hello World!1234\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"
+"Hello World!12345" -> "Hello World!12345\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f\x0f"
+```
+
+A possible implementation in Python:
+```py
+def pkcs7_pad(data: bytes, block_size: int) -> bytes:
+    if block_size <= 0 or block_size > 255:
+        raise ValueError("The block size must be in the range of 1 to 255")
+
+    pad_len = block_size - (len(data) % block_size)
+    padding = bytes([pad_len] * pad_len)
+    return data + padding
+
+def pkcs7_unpad(data: bytes, block_size: int) -> bytes:
+    if not data or len(data) % block_size != 0:
+        raise ValueError("The data has an incorrect length")
+
+    pad_len = data[-1]
+    if pad_len <= 0 or pad_len > block_size:
+        raise ValueError("Incorrect padding value")
+
+    if data[-pad_len:] != bytes([pad_len] * pad_len):
+        raise ValueError("Incorrect PKCS#7 padding")
+
+    return data[:-pad_len]
+```
+
+## Padding Oracle Attack - Decrypt
+
+<Image src={aesCbcWebp} alt="AES - CBC" />
+
+The attacker knows all the values of the Ciphertext blocks (IV, ct1, ct2, ..., ctN).
+The attacker wants to recover all the values of the Plaintext blocks (pt1, pt2, ..., ptN).
+
+Let's consider the decryption algorithm using the last two blocks ct1, ct2 as an example.
+
+```py
+is2 = decrypt(key, ct2) // Compute the internal state is2
+pt2 = is2 xor ct1       // Compute pt2
+pt2 = unpad(pt2)        // Remove the padding
+```
+
+Since the padding size does not exceed the block size, unpad affects only the last block.
+
+In which cases can the server report incorrect padding?
+
+Correct block formats
+```txt
+ _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  1
+ _  _  _  _  _  _  _  _  _  _  _  _  _  _  2  2
+ _  _  _  _  _  _  _  _  _  _  _  _  _  3  3  3
+ _  _  _  _  _  _  _  _  _  _  _  _  4  4  4  4
+ _  _  _  _  _  _  _  _  _  _  _  5  5  5  5  5
+.....
+ _  _ 14 14 14 14 14 14 14 14 14 14 14 14 14 14
+ _ 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15
+16 16 16 16 16 16 16 16 16 16 16 16 16 16 16 16
+```
+
+where
+* `_` - any byte value.
+* a digit - the byte value in decimal.
+
+All other formats lead to incorrect padding.
+
+### Algorithm
+
+Notation: `ct2` is the last block, `ct1` is the penultimate block.
+
+__Algorithm for finding the `Intermediate state` of the last block__:
+* Check that the padding matches the format ` _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  1`:
+  * Try all values of `ct1[15]`
+  * If the server replies that the padding is correct, then
+    * `is2[15] = ct1[15] xor 1`
+    * Move on to the next step
+* Check that the padding matches the format ` _  _  _  _  _  _  _  _  _  _  _  _  _  _  2  2`:
+  * Set `ct1[15]` to `2`
+  * Try all values of `ct1[14]`
+  * If the server replies that the padding is correct, then
+    * `is2[14] = ct1[14] xor 2`
+    * Move on to the next step
+* Check that the padding matches the format ` _  _  _  _  _  _  _  _  _  _  _  _  _  3  3  3`:
+  * Set `ct1[14]`, `ct[15]` to `3`
+  * Try all values of `ct1[13]`
+  * If the server replies that the padding is correct, then
+    * `is2[13] = ct1[13] xor 3`
+    * Move on to the next step
+* Check that the padding matches the format ` _  _  _  _  _  _  _  _  _  _  _  _  4  4  4  4`:
+  * Set `ct1[13], ct1[14], ct[15]` to `4`
+  * Try all values of `ct1[12]`
+  * If the server replies that the padding is correct, then
+    * `is2[12] = ct1[12] xor 4`
+    * Move on to the next step
+* Using the same actions, find all values `is2[0], is2[1], ..., is2[16]`
+
+__Algorithm for decrypting all blocks__:
+* While `ciphertext` is not empty
+  * Find `is2` of the last block
+  * Compute `pt2 = ct1 xor is2`
+  * Save the result `plaintext = pt2 + plaintext`
+  * Discard the last block
+* Apply `unpad` to `plaintext` to remove the padding
+* `plaintext` will contain the decrypted message
+
+### Example
+
+Let's implement the algorithm and check that it works by solving the AES-CBC-POA task.
+https://pwn.college/intro-to-cybersecurity/cryptography/
+
+There is a dispatcher that encrypts a message:
+
+<CodeFile file="task1-dispatcher.py" />
+
+There is a worker that decrypts a message:
+
+<CodeFile file="task1-worker.py" />
+
+Looking at the code in worker.py, we see that it uses the `unpad` function.
+If the received message contains invalid padding, an exception will be thrown; since nobody catches it, the program will terminate with a nonzero exit code.
+
+We will get the encrypted message by calling an external program and capturing its output:
+```py
+def dispatcher(args):
+    result = subprocess.run(dispatcher_cmd + args, capture_output=True, text=True)
+    return base64.b64decode(result.stdout.split()[1])
+```
+
+We will check padding validity by checking the exit code:
+```py
+def check_pad(ct, isprint=False):
+    text = f"TASK: {base64.b64encode(ct).decode()}\n"
+    result = subprocess.run(worker_cmd, input=text, capture_output=True, text=True)
+    if isprint and result.returncode == 0:
+        print(result.stdout)
+    return result.returncode == 0
+```
+
+The `aes_pao_dfs` function works with the last two blocks `ct1`, `ct2`.
+It returns the `Intermediate state` for block `ct2`.
+The `idx`, `is2` parameters are used to pass state through recursive calls.
+The function tries all values at position `idx`. On success it moves to the next position.
+```py
+def aes_pao_dfs(ct_prefix, ct1, ct2, idx, is2, check):
+    if idx == -1:
+        return is2
+
+    if idx < 0 or idx > 15:
+        return None
+
+    ct1_new = ct1[:]
+    for i in range(idx+1, 16):
+        ct1_new[i] = is2[i] ^ (16 - idx)
+
+    for i in range(256):
+        ct1_new[idx] = i
+
+        if not check(ct_prefix + ct1_new + ct2):
+            continue
+
+        is2 = is2[:]
+        is2[idx] = ct1_new[idx] ^ (16 - idx)
+
+        print(f"idx={idx:03}   i={i:03}   is2={is2.hex()}   pt2={xor(ct1, is2)}", flush=True)
+
+        res = aes_pao_dfs(ct_prefix, ct1, ct2, idx - 1, is2, check)
+        if res != None:
+            return res
+
+    return None
+```
+
+Split the original encrypted message into blocks.
+For each pair of blocks it returns the `Intermediate state` for the last block and removes that block.
+When finished, all that remains is to apply `flag = ct1 xor is2`.
+```py
+for i in range(len(ct) - 16 - 16, -1, -16):
+    ct_prefix, ct1, ct2, ct_suffix = ct[:i], ct[i:i+16], ct[i+16:i+16+16], ct[i+16+16:]
+    is2 = bytearray(b"\x00" * 16)
+
+    is2 = aes_pao_dfs(ct_prefix, ct1, ct2, 16-1, is2, check_pad)
+    if is2 == None:
+        print("NOT FOUND")
+        break
+
+    flag = xor(ct1, is2).decode() + flag
+    print(f"flag: {flag}   {flag.encode()}")
+    check_pad(ct, True)
+```
+
+The full solution:
+
+<CodeFile file="task1-main.py" />
+
+Run the program and wait until the message is fully decrypted:
+
+<CodeFile file="task1-output.log" />
+
+The encrypted message `fdcd63a14bb2531530c19bb6cb9ac6e2d8e3ea7b83e8dae1bdeff3a42aefba4a837e42dc0f654b3516c7a136cc0c69b5414267dda54386231b58b5bed61fb201468ed73a20e435dec7afb1ac46364603` was known.
+
+After applying the Padding Oracle Attack we were able to decrypt it and obtain the flag `CTF{RedBlueStrategy_P4dd1ng_0r4cl3_4tt4ck_AES_CBC_16byt3s}`.
+
+Task solved!
+
+## Padding Oracle Attack - Encrypt
+
+Almost all of the reasoning used to find `pt` and to find `ct` is the same, because the base task is to find `is`.
+And `pt` and `ct` are symmetric with respect to `is`:
+```py
+pt = ct xor is
+ct = pt xor is
+```
+
+__Algorithm for generating all ct blocks__:
+* Create a random `ciphertext` with the same size as `plaintext` (excluding `iv`)
+* For each adjacent pair of ct blocks, starting from the last one
+  * Find `is2` of the last block
+  * Compute `ct1 = pt2 xor is2`
+  * Update block ct1 in the original `ciphertext`
+  * Discard the last block
+* `ciphertext` contains the desired ciphertext, whose decryption yields the required `plaintext`
+
+### Example
+
+Let's implement the algorithm and check that it works by solving the AES-CBC-POA-Encrypt task.
+https://pwn.college/intro-to-cybersecurity/cryptography/
+
+There is a dispatcher that encrypts a message:
+
+<CodeFile file="task2-dispatcher.py" />
+
+There is a worker that decrypts a message:
+
+<CodeFile file="task2-worker.py" />
+
+dispatcher.py and worker.py differ only slightly from the previous task.
+
+The main difference is that we do not need the dispatcher. You will generate the `ciphertext` yourself, based on the `Intermediate state` of each block and the message you want to obtain after decryption.
+
+Split the original encrypted message into blocks.
+Generate the ciphertext blocks sequentially, from last to first.
+```py
+plaintext = b"please give me the flag, kind worker process!"
+plaintext = pad(plaintext, 16)
+
+ct = bytearray(bytearray(os.urandom(16+len(plaintext))))
+print(f"ct: {ct.hex()}")
+
+for i in range(len(ct) - 16 - 16, -1, -16):
+    ct_prefix, ct1, ct2, ct_suffix = ct[:i], ct[i:i+16], ct[i+16:i+16+16], ct[i+16+16:]
+    is2 = bytearray(b"\x00" * 16)
+
+    is2 = aes_pao_dfs(ct_prefix, ct1, ct2, 16-1, is2, check_pad)
+    if is2 == None:
+        print("NOT FOUND")
+        break
+
+    ct = ct_prefix + xor(plaintext[i:i+16], is2) + ct2 + ct_suffix
+    print(f"ct: {ct.hex()}")
+    check_pad(ct, True)
+```
+
+The full solution:
+
+<CodeFile file="task2-main.py" />
+
+Run the program and wait until the message is fully decrypted:
+
+<CodeFile file="task2-output.log" />
+
+For the message `"please give me the flag, kind worker process!"` we generated the encrypted message
+`f166d4f46c5a087b40a3d64ea8006b2c59131fa7146c7d9c947ce6cd54bbdb6b0cc69a0af24a33054cadd1380d4f9c0bca2f0dca4810b08704e27c32fe4ffbcb` without knowing the key.
+
+After applying the Padding Oracle Attack we were able to encrypt the message and obtain the flag `CTF{RedBlueStrategy_P4dd1ng_0r4cl3_4tt4ck_AES_CBC_16byt3s}`.
+
+Task solved!
+
+## Conclusions
+
+A very interesting attack.
+  In essence, using `pad` and `unpad` makes the use of AES-CBC completely unprotected.

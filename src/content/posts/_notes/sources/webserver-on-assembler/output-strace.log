@@ -1,0 +1,125 @@
+strace -f -s 256 ./server
+execve("./server", ["./server"], 0x7fff3cce04e8 /* 16 vars */) = 0
+socket(AF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+bind(3, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("0.0.0.0")}, 16) = 0
+listen(3, 0)                            = 0
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2067 attached
+)                                  = 2067
+[pid  2067] close(3 <unfinished ...>
+[pid  2064] close(4 <unfinished ...>
+[pid  2067] <... close resumed>)        = 0
+[pid  2064] <... close resumed>)        = 0
+[pid  2067] read(4,  <unfinished ...>
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2067] <... read resumed>"POST /key_abc HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\nContent-Length: 9\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nvalue_abc", 1024) = 160
+[pid  2067] open("key_abc", O_WRONLY|O_CREAT, 0777) = 3
+[pid  2067] write(3, "value_abc", 9)    = 9
+[pid  2067] close(3)                    = 0
+[pid  2067] write(4, "HTTP/1.0 200 OK\r\n\r\n", 19) = 19
+[pid  2067] exit(0)                     = ?
+[pid  2067] +++ exited with 0 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2067, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2069 attached
+)                                  = 2069
+[pid  2064] close(4 <unfinished ...>
+[pid  2069] close(3 <unfinished ...>
+[pid  2064] <... close resumed>)        = 0
+[pid  2069] <... close resumed>)        = 0
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2069] read(4, "GET /12345 HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n\r\n", 1024) = 80
+[pid  2069] open("12345", O_RDONLY)     = -1 ENOENT (No such file or directory)
+[pid  2069] exit(1)                     = ?
+[pid  2069] +++ exited with 1 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2069, si_uid=1000, si_status=1, si_utime=0, si_stime=0} ---
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2071 attached
+)                                  = 2071
+[pid  2071] close(3 <unfinished ...>
+[pid  2064] close(4 <unfinished ...>
+[pid  2071] <... close resumed>)        = 0
+[pid  2064] <... close resumed>)        = 0
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2071] read(4, "POST /12345 HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\nContent-Length: 6\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nabcdef", 1024) = 155
+[pid  2071] open("12345", O_WRONLY|O_CREAT, 0777) = 3
+[pid  2071] write(3, "abcdef", 6)       = 6
+[pid  2071] close(3)                    = 0
+[pid  2071] write(4, "HTTP/1.0 200 OK\r\n\r\n", 19) = 19
+[pid  2071] exit(0)                     = ?
+[pid  2071] +++ exited with 0 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2071, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2073 attached
+)                                  = 2073
+[pid  2064] close(4)                    = 0
+[pid  2073] close(3 <unfinished ...>
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2073] <... close resumed>)        = 0
+[pid  2073] read(4, "GET /12345 HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n\r\n", 1024) = 80
+[pid  2073] open("12345", O_RDONLY)     = 3
+[pid  2073] read(3, "abcdef", 1024)     = 6
+[pid  2073] close(3)                    = 0
+[pid  2073] write(4, "HTTP/1.0 200 OK\r\n\r\n", 19) = 19
+[pid  2073] write(4, "abcdef", 6)       = 6
+[pid  2073] exit(0)                     = ?
+[pid  2073] +++ exited with 0 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2073, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2075 attached
+)                                  = 2075
+[pid  2075] close(3 <unfinished ...>
+[pid  2064] close(4 <unfinished ...>
+[pid  2075] <... close resumed>)        = 0
+[pid  2064] <... close resumed>)        = 0
+[pid  2075] read(4,  <unfinished ...>
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2075] <... read resumed>"POST /12345 HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\nContent-Length: 9\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nnew_value", 1024) = 158
+[pid  2075] open("12345", O_WRONLY|O_CREAT, 0777) = 3
+[pid  2075] write(3, "new_value", 9)    = 9
+[pid  2075] close(3)                    = 0
+[pid  2075] write(4, "HTTP/1.0 200 OK\r\n\r\n", 19) = 19
+[pid  2075] exit(0)                     = ?
+[pid  2075] +++ exited with 0 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2075, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2077 attached
+)                                  = 2077
+[pid  2064] close(4 <unfinished ...>
+[pid  2077] close(3 <unfinished ...>
+[pid  2064] <... close resumed>)        = 0
+[pid  2077] <... close resumed>)        = 0
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2077] read(4, "GET /12345 HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n\r\n", 1024) = 80
+[pid  2077] open("12345", O_RDONLY)     = 3
+[pid  2077] read(3, "new_value", 1024)  = 9
+[pid  2077] close(3)                    = 0
+[pid  2077] write(4, "HTTP/1.0 200 OK\r\n\r\n", 19) = 19
+[pid  2077] write(4, "new_value", 9)    = 9
+[pid  2077] exit(0)                     = ?
+[pid  2077] +++ exited with 0 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2077, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+accept(3, NULL, NULL)                   = 4
+fork(strace: Process 2079 attached
+)                                  = 2079
+[pid  2064] close(4 <unfinished ...>
+[pid  2079] close(3 <unfinished ...>
+[pid  2064] <... close resumed>)        = 0
+[pid  2079] <... close resumed>)        = 0
+[pid  2064] accept(3, NULL, NULL <unfinished ...>
+[pid  2079] read(4, "GET /key_abc HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n\r\n", 1024) = 82
+[pid  2079] open("key_abc", O_RDONLY)   = 3
+[pid  2079] read(3, "value_abc", 1024)  = 9
+[pid  2079] close(3)                    = 0
+[pid  2079] write(4, "HTTP/1.0 200 OK\r\n\r\n", 19) = 19
+[pid  2079] write(4, "value_abc", 9)    = 9
+[pid  2079] exit(0)                     = ?
+[pid  2079] +++ exited with 0 +++
+<... accept resumed>)                   = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=2079, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---

@@ -1,0 +1,118 @@
+---
+title: Lucky Ticket — Tinkoff CTF 2024
+description: "Predicting millisecond-seeded ticket numbers to farm lucky tickets and reach 100% luck, then recovering the flag from the interview endpoint of Tinkoff CTF 2024."
+pubDatetime: 2024-04-05
+tags:
+    - CTF
+    - network
+    - cryptography
+    - Tinkoff
+    - SPbCTF
+    - Golang
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import luckyTicketArchive from '../assets/ctf-tinkoff-2024-luckyticket/luckyticket.tar.gz?url';
+
+
+## Initial Data
+
+**Task link**
+[Lucky Ticket](https://ctf.tinkoff.ru/tasks/luckyticket)
+
+**Description**
+A talented developer wants to land a job at a big tech company but is afraid of failure. He plans to eat a hundred lucky tickets. He has no time to look for them, and only 5000 ₽ in his pocket.
+Make the public transport terminal issue him a pack of lucky tickets — with equal sums of the first and last three digits.
+
+**Terminal**
+[t-luckyticket-w8mg6qr0.spbctf.ru](https://t-luckyticket-w8mg6qr0.spbctf.ru)
+
+**Terminal source code**
+<a href={luckyTicketArchive}>Download luckyticket.tar.gz</a>
+
+## Solution
+
+### Website Functionality Analysis
+
+Register on the site.
+Let's see what actions are available on the site:
+* On registration, the user has 5000 coins and 0% luck
+* There is an option to go through an interview. When clicked, we get "Thank you for the time spent with us in the interview. Unfortunately, we chose another candidate"
+* You can buy 1 ticket for 10 coins
+* A purchased ticket can be eaten. When clicked, we get the message "You ate the ticket and got -10 luck"
+
+### Terminal Source Code Analysis
+
+The terminal has several endpoints:
+
+File `routes.go`:
+
+<CodeFile file="routes.go" />
+
+Let's look at the `POST /api/interview` endpoint.
+The flag can be obtained as soon as the luck level reaches 100%:
+
+File `interview.go`:
+
+<CodeFile file="interview.go" />
+
+Let's look at the `POST /api/ticket/eat` endpoint.
+If the eaten ticket was lucky, the luck level increases by 1%, otherwise it decreases by 1%.
+The maximum luck level is 100%:
+
+File `eat_ticket.go`:
+
+<CodeFile file="eat_ticket.go" />
+
+Let's look at the `POST /api/ticket/buy` endpoint.
+When generating the ticket number, a seed is used that depends on the current time with millisecond precision:
+
+File `buy_ticket.go`:
+
+<CodeFile file="buy_ticket.go" />
+
+### Flag Acquisition Strategy
+
+* Register the user manually, since a captcha must be entered
+* Buy N tickets and record the purchase time of each ticket
+* Compute the time difference so that the server generates the ticket number at the time we need. To do this:
+  * Generate tickets locally in the time range [now - M seconds, now + M seconds]
+  * Find the numbers of the purchased tickets and compute the time difference for each ticket
+  * Find the average difference, or the median, or simply take the K-th result
+* Eat tickets until the luck level reaches 100%
+  * If the purchased ticket turns out to be lucky, eat it
+
+### Writing the Solver Program
+
+We'll copy some structures and functions from the terminal sources.
+Overall, nothing complicated. Describing the REST requests takes up a lot of space.
+
+The full program looks like this:
+
+File `main.go`:
+
+<CodeFile file="main.go" />
+
+### Getting the Flag
+
+Run the program written in Go:
+
+File `output.log`:
+
+<CodeFile file="output.log" />
+
+We spent 20 tickets to determine the time difference between the server and the local computer.
+On average, the difference is from 50 to 52 milliseconds. A fairly stable result for each ticket.
+We use this difference to buy lucky tickets.
+We spent 219 tickets to buy 100 lucky tickets. Pretty good. 2610 coins left.
+
+We got the flag `tctf{n0w_y0u_4r3_7h3_lucky_0wn3r_0f_4bd0m1n4l_p41n}`
+
+## Links
+* [Writeup of the "Lucky Ticket" task by SPbCTF](https://spbctf.notion.site/0cb5c3037a68461a857d38e64b6544c9)
+
+## Questions
+* How can REST requests be described more concisely in Go?
+
+## Conclusion
+* A fairly simple task, solvable in one evening, although this task has a hard difficulty level

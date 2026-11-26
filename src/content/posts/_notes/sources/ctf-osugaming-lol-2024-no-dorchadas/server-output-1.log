@@ -1,0 +1,10 @@
+[amyasnikov@ubuntu:~]$ nc chal.osugaming.lol 9***
+Welcome to the osu! Beatmap Signer
+
+--------------------------
+| [1] Sign a beatmap     |
+| [2] Verify a beatmap   |
+--------------------------
+Enter your option: 1
+Enter your beatmap in base64: X19fX19fX19fX19fLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLg==
+Okay, I've signed that for you: 5cea859a5d3186608d5e210b2ef920bd

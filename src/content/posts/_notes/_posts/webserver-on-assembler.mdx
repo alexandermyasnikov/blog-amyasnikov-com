@@ -1,0 +1,555 @@
+---
+title: "Web Server in Assembly"
+description: "Building a simple concurrent HTTP server in x86-64 Assembly with Linux syscalls: socket, bind, listen, accept, fork, a key-value store on disk, and verification with curl and strace."
+pubDatetime: 2024-11-24
+tags:
+    - pwn.college
+    - Assembler
+    - C
+    - Linux
+    - strace
+    - cURL
+    - syscall
+    - web
+    - key-value storage
+    - HTTP
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+
+## Goal
+
+To learn Assembly, let's build a simple web server that simulates a key-value database.
+
+* The server should support the following endpoints:
+    * `GET /{key}` - retrieve the value for the key.
+    * `POST /{key}` - store the request body as value for the key.
+* The server should support concurrent request handling.
+* The server should persist all data on disk.
+* All server code must be written in Assembly.
+
+Since Assembly is difficult and inconvenient to work with, simplifications are allowed.
+
+
+## Sample Implementation
+
+The Assembly code will use system calls like `socket`, `bind`, `listen`, `accept`, `fork`, `read`, `write`, `open`, `close` to interact with the filesystem and network stack.
+
+To implement the server, which processes network requests, we use a sequence of system calls:
+* `socket` - creates a socket for network communication
+* `bind` - associates the socket with an IP address and port
+* `listen` - puts the socket into listening mode, allowing the OS to manage connections
+
+Once the socket is set up, the server enters a main loop:
+* `accept` blocks until a new incoming connection arrives.
+* When a client connects, `accept` returns a new socket for the connection.
+* `fork` is used to create a new process to handle the connection.
+* If `pid == 0`, we're in the child process handling the request.
+* If `pid > 0`, we're in the parent, ready for the next connection.
+Don't forget to close unused sockets after `fork` (client socket in parent, server socket in child).
+
+Client socket handling includes:
+* Reading the raw HTTP request from the socket.
+* For a `GET` request:
+    * Parse the `key` from the request.
+    * Open a file named after the `key`.
+    * Read the value `val` from the file.
+    * Close the file.
+    * Write a valid HTTP response with the `val` to the socket.
+    * Close the socket.
+* For a `POST` request:
+    * Extract `key`, `val` from the request.
+    * Create a file named after the `key`.
+    * Write `val` to the file.
+    * Close the file.
+    * Write a valid HTTP response.
+    * Close the socket.
+
+High-level pseudocode:
+```c
+void main() {
+    srv_socket = socket()
+    bind(srv_socket)
+    listen(srv_socket)
+
+    while true {
+        cli_socket = accept(srv_socket)
+
+        pid = fork()
+        if pid == 0 {
+            close(srv_socket)
+            process_request(cli_socket)
+            exit(0)
+        }
+
+        close(cli_socket)
+    }
+}
+```
+
+```c
+void process_request(socket) {
+    req = read(socket)
+    method = parse_method(req)
+    key = parse_url(req)
+
+    if method == "GET" {
+        fd = open(key)
+        val = read(fd)
+        close(fd)
+
+        write(socket, http_status_ok)
+        write(socket, val)
+        close(socket)
+    }
+
+    if method == "POST" {
+        val = parse_body(req)
+
+        fd = create(key)
+        write(fd, val)
+        close(fd)
+
+        write(socket, http_status_ok)
+        close(socket)
+    }
+}
+```
+
+
+## Assembly
+
+### What is needed to perform a system call in assembly?
+* Determine the syscall arguments: how many and what types. You can find this info at: [x64.syscall.sh](https://x64.syscall.sh), [man7.org](https://man7.org/linux/man-pages/man2/fork.2.html).
+* Place arguments in registers: `RDI` - first argument, `RSI` - second, `RDX` - third, `RCX` - fourth, `R8` - fifth, `R9` - sixth, others go on the stack.
+* Place the syscall number in `RAX`.
+* Execute the `syscall` instruction. The result will be in `RAX`.
+
+Example for the function `int socket(int domain, int type, int protocol)`:
+```asm
+# int socket(int domain, int type, int protocol);
+mov rdi, AF_INET       # domain
+mov rsi, SOCK_STREAM   # type
+mov rdx, IPPROTO_IP    # protocol
+mov rax, SYS_socket    # socket
+syscall
+```
+
+### How to store local variables on the stack?
+
+Using `process_get` as an example:
+```asm
+process_get:
+    # vars:
+    #   [rbp-8]    - 8b, socket_fd
+    #   [rbp-16]   - 8b, &req_buffer
+    #   [rbp-24]   - 8b, file_fd
+    #   [rbp-1048] - 1024b, file_buffer
+    #   [rbp-1056] - 8b, file_buffer_length
+
+    push rbp
+    mov rbp, rsp
+    sub rsp, 1056   # Calculate the total size of data to be saved on the stack
+                    # socket_fd          - 8 bytes
+                    # req_buffer         - 8 bytes
+                    # file_fd            - 8 bytes
+                    # file_buffer        - 1024 bytes
+                    # file_buffer_length - 8 bytes
+                    # Total 1056 bytes
+
+                    # Next, these addresses are used to access variables:
+                    # [rbp-8]    - 8 bytes, socket_fd
+                    # [rbp-16]   - 8 bytes, &req_buffer (pointer to request buffer)
+                    # [rbp-24]   - 8 bytes, file_fd
+                    # [rbp-1048] - 1024 bytes, file_buffer
+                    # [rbp-1056] - 8 bytes, file_buffer_length
+
+    mov [rbp-8], rdi   # Save socket_fd
+    mov [rbp-16], rsi  # Save req_buffer
+
+    # ...
+
+    mov rsp, rbp   # Revert stack
+    pop rbp
+    ret
+```
+
+
+## Implementation
+
+Let's look at the key parts.
+
+Syscalls `socket`, `bind`, `listen`.
+Remember to specify the port number in network byte order.
+```asm
+    # int socket(int domain, int type, int protocol);
+    mov rdi, AF_INET       # domain
+    mov rsi, SOCK_STREAM   # type
+    mov rdx, IPPROTO_IP    # protocol
+    mov rax, SYS_socket    # socket
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+
+
+    mov [rbp-24], rax   # save srv_socket_fd
+
+
+    # init sockaddr_in
+    movw [rbp-16],   AF_INET
+    movw ax, PORT
+    xchg al, ah
+    movw [rbp-16+2], ax
+    movd [rbp-16+4], INADDR_ANY
+
+
+    # int bind(int socket, const struct sockaddr *address, socklen_t address_len);
+    mov rdi, [rbp-24]      # socket
+    lea rsi, [rbp-16]      # address
+    mov rdx, 16            # address_len
+    mov rax, SYS_bind      # socket
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+
+
+    # int listen(int socket, int backlog);
+    mov rdi, [rbp-24]      # socket
+    mov rsi, 0             # backlog
+    mov rax, SYS_listen    # listen
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+```
+
+Main loop waiting for incoming connections.
+After `accept` triggers, `fork` is called. The corresponding unused socket is closed in different processes.
+The parent process goes back to the `accept` call. The child handles the incoming connection and then exits by calling `exit`.
+```asm
+.accept:
+    # int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len);
+    mov rdi, [rbp-24]        # socket
+    mov rsi, 0               # address
+    mov rdx, 0               # adress_len
+    mov rax, SYS_accept      # accept
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+
+
+    mov [rbp-32], rax   # save cli_socket_fd
+
+
+    # pid_t fork(void);
+    mov rax, SYS_fork   # fork
+    syscall
+
+
+    test rax, rax
+    js _exit_with_error
+
+
+    mov r14, rax   # pid
+
+    # close cli_socket_fd in parent
+    # close srv_socket_fd in child
+    jz .accept_set_srv_socket_fd
+    mov r15, [rbp-32]
+    jmp .accept_close_fd
+.accept_set_srv_socket_fd:
+    mov r15, [rbp-24]
+.accept_close_fd:
+    # int close(int fd);
+    mov rdi, r15         # fd
+    mov rax, SYS_close   # close
+    syscall
+
+
+    # parent process wait new clients
+    test r14, r14
+    jg .accept
+
+
+    # child process precesses client
+    mov rdi, [rbp-32]
+    call process_request
+
+
+    # exit(EXIT_OK)
+    mov rdi, EXIT_OK
+    mov rax, SYS_exit
+    syscall
+```
+
+Function to read data from the user request and determine the method (GET or POST) by the first letter.
+All data is stored on the stack. Prologue and epilogue are used to manage stack size.
+```asm
+process_request:
+    # args:
+    #   rdi = fd
+    # vars:
+    #   [rbp-8]    - 8b, fd
+    #   [rbp-16]   - 8b, buffer_length
+    #   [rbp-1040] - 1024b, buffer
+
+    push rbp
+    mov rbp, rsp
+    sub rsp, 1040
+
+
+    mov [rbp-8], rdi   # save client socket fd
+
+
+    # ssize_t read(int fd, void buf[.count], size_t count);
+    mov rdi, [rbp-8]      # fd
+    lea rsi, [rbp-1040]   # buf
+    mov rdx, 1024         # count
+    mov rax, SYS_read     # read
+    syscall
+
+
+    cmpb [rbp-1040], 'P'
+    je _process_post
+    mov rdi, [rbp-8]
+    lea rsi, [rbp-1040]
+    call process_get
+    jmp _endif
+_process_post:
+    mov rdi, [rbp-8]
+    lea rsi, [rbp-1040]
+    mov rdx, rax
+    call process_post
+_endif:
+
+
+    mov rsp, rbp
+    pop rbp
+    ret
+```
+
+POST request processing.
+The hardest part is correctly extracting the key and value from the request. Everything else is straightforward.
+```asm
+process_post:
+    # args:
+    #   rdi = socket_fd
+    #   rsi = &buffer
+    #   rdx = buffer_length
+    # vars:
+    #   [rbp-8]    - 8b, socket_fd
+    #   [rbp-16]   - 8b, &req_buffer
+    #   [rbp-24]   - 8b, buffer_length
+    #   [rbp-32]   - 8b, file_fd
+
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+
+    mov [rbp-8], rdi
+    mov [rbp-16], rsi
+    mov [rbp-24], rdx
+
+
+    # set \x00 after "xxx" in "POST /xxx HTTP/1.1\r\n....."
+    mov r8, rsi
+    add r8, 5
+.process_post_path:
+    add r8, 1
+    cmpb [r8], ' '
+    jne .process_post_path
+.process_post_path_end:
+    movb byte [r8-1], 0
+
+
+    # int open(const char *pathname, int flags, /* mode_t mode */);
+    lea rdi, [rsi]+6    # pathname
+    mov rsi, O_WRONLY   # flags
+    xor rsi, O_CREAT    # flags
+    mov rdx, 0777       # mode
+    mov rax, SYS_open   # open
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+
+
+    mov [rbp-32], rax   # save fd
+
+
+    # parse data between '\n' and end of body
+    mov r8, [rbp-16]
+    add r8, [rbp-24]
+.process_body:
+    sub r8, 1
+    cmpb [r8], '\n'
+    jne .process_body
+.process_body_end:
+    add r8, 1   # data_offset
+
+    mov r9, [rbp-16]
+    add r9, [rbp-24]
+    sub r9, r8   # data_length
+
+
+    # ssize_t write(int fd, void buf[.count], size_t count);
+    mov rdi, [rbp-32]    # fd
+    mov rsi, r8          # buf
+    mov rdx, r9          # count
+    mov rax, SYS_write   # write
+    syscall
+
+
+    # int close(int fd);
+    mov rdi, [rbp-32]   # fd
+    mov rax, SYS_close  # close
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+
+
+    # ssize_t write(int fd, const void buf[.count], size_t count);
+    mov rdi, [rbp-8]                     # fd
+    lea rsi, [response_header_ok]        # buf
+    mov rdx, response_header_ok_length   # count
+    mov rax, SYS_write                   # write
+    syscall
+
+
+    mov rsp, rbp
+    pop rbp
+    ret
+```
+
+GET request processing
+```asm
+process_get:
+    # args:
+    #   rdi = socket_fd
+    #   rsi = &buffer
+    # vars:
+    #   [rbp-8]    - 8b, socket_fd
+    #   [rbp-16]   - 8b, &req_buffer
+    #   [rbp-24]   - 8b, file_fd
+    #   [rbp-1048] - 1024b, file_buffer
+    #   [rbp-1056] - 8b, file_buffer_length
+
+    push rbp
+    mov rbp, rsp
+    sub rsp, 1056
+
+    mov [rbp-8], rdi
+    mov [rbp-16], rsi
+
+
+    # set \x00 after "xxx" in "GET /xxx HTTP/1.1\r\n....."
+    mov r8, rsi
+    add r8, 4
+.process_get_path:
+    add r8, 1
+    cmpb [r8], ' '
+    jne .process_get_path
+.process_get_path_end:
+    movb byte [r8-1], 0
+
+
+    # int open(const char *pathname, int flags, /* mode_t mode */);
+    lea rdi, [rsi]+5    # pathname
+    mov rsi, O_RDONLY   # flags
+    mov rdx, 0          # mode
+    mov rax, SYS_open   # open
+    syscall
+
+    test rax, rax
+    js _exit_with_error
+
+    mov [rbp-24], rax
+
+
+    # ssize_t read(int fd, void buf[.count], size_t count);
+    mov rdi, [rbp-24]     # fd
+    lea rsi, [rbp-1048]   # buf
+    mov rdx, 1024         # count
+    mov rax, SYS_read     # read
+    syscall
+
+    mov [rbp-1056], rax
+
+
+    # int close(int fd);
+    mov rdi, [rbp-24]   # fd
+    mov rax, SYS_close  # close
+    syscall
+
+
+    # ssize_t write(int fd, const void buf[.count], size_t count);
+    mov rdi, [rbp-8]                     # fd
+    lea rsi, [response_header_ok]        # buf
+    mov rdx, response_header_ok_length   # count
+    mov rax, SYS_write                   # write
+    syscall
+
+
+    # ssize_t write(int fd, const void buf[.count], size_t count);
+    mov rdi, [rbp-8]      # fd
+    lea rsi, [rbp-1048]   # buf
+    mov rdx, [rbp-1056]   # count
+    mov rax, SYS_write    # write
+    syscall
+
+
+    mov rsp, rbp
+    pop rbp
+    ret
+```
+
+
+Full server source code:
+
+<CodeFile file="server.s" />
+
+
+## Testing
+
+Compile the source file `server.s` into an executable:
+```bash
+as -o server.o server.s
+ld -o server server.o
+```
+
+Run the server (can be run with `strace` to monitor status and errors).
+
+```sh
+./server
+
+strace -f -s 256 ./server
+```
+
+Use `curl` to perform test requests:
+
+<CodeFile file="output-curl.log" />
+
+It is clear that the server correctly handles requests for getting a value by key and creating/updating a record by key.
+Only if the requested key does not exist, the server closes the connection without a proper response — not implemented.
+
+The strace output matches the expected behavior. The order of system calls and their arguments are valid.
+
+<CodeFile file="output-strace.log" />
+
+
+## Useful links
+* [Linux system call information for various architechtures](https://x64.syscall.sh/)
+* [Code Browser for C, C++, Rust & Dart](https://codebrowser.dev/)
+* [fork(2) — Linux manual page](https://man7.org/linux/man-pages/man2/fork.2.html)
+* [Building a Web Server - Computing 101 - pwn.college](https://pwn.college/computing-101/building-a-web-server/)
+
+
+## Conclusions
+It turned out to be not that hard to write not just something working, but a working HTTP server in assembly.
+The source file size is about 300-400 lines. The executable size is only 8kb.
+Of course, you shouldn't write servers like this in practice.
+But this is a great way to learn assembly and write something compact and embeddable for other tasks.

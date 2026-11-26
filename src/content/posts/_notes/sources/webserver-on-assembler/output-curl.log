@@ -1,0 +1,29 @@
+curl -i http://0.0.0.0:8080/key_abc --data "value_abc"
+HTTP/1.0 200 OK
+
+
+curl -i http://0.0.0.0:8080/12345
+curl: (52) Empty reply from server
+
+
+curl -i http://0.0.0.0:8080/12345 --data "abcdef"
+HTTP/1.0 200 OK
+
+
+curl -i http://0.0.0.0:8080/12345
+HTTP/1.0 200 OK
+abcdef
+
+
+curl -i http://0.0.0.0:8080/12345 --data "new_value"
+HTTP/1.0 200 OK
+
+
+curl -i http://0.0.0.0:8080/12345
+HTTP/1.0 200 OK
+new_value
+
+
+curl -i http://0.0.0.0:8080/key_abc
+HTTP/1.0 200 OK
+value_abc

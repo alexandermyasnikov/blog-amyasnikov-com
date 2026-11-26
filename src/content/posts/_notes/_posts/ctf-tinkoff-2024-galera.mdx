@@ -1,0 +1,238 @@
+---
+title: Galera — Tinkoff CTF 2024
+description: "Reversing an iOS app to reconstruct its REST API, then exploiting a race condition with one-time referral codes to earn enough points to buy freedom and capture the flag."
+pubDatetime: 2024-04-22
+tags:
+    - CTF
+    - web
+    - iOS
+    - mobile
+    - reverse
+    - Tinkoff
+    - SPbCTF
+    - Bash
+    - race condition
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import galeraZip from '../assets/ctf-tinkoff-2024-galera/galera.zip?url';
+
+
+## Initial Data
+
+**Task link**
+[Galera](https://ctf.tinkoff.ru/tasks/galera)
+
+**Description**
+An outsourcing company lured developers with interesting tasks, then locked them on a real galley, chained them to the oars and sent them sailing. Free the team.
+
+The corporate loyalty program app: Galera_be1756d.ipa
+
+**Application**
+<a href={galeraZip}>Download galera.zip</a>
+
+## Solution
+
+### Analyzing the Galera_be1756d.ipa File
+
+The Galera_be1756d.ipa file is actually an archive:
+
+```sh
+[amyasnikov@ubuntu:~]$ file Galera_be1756d.ipa
+Galera_be1756d.ipa: Zip archive data, at least v1.0 to extract, compression method=store
+```
+
+Extract all the files:
+
+```sh
+[amyasnikov@ubuntu:~]$ unzip Galera_be1756d.ipa
+Archive:  Galera_be1756d.ipa
+   creating: Payload/
+   creating: Payload/Galera.app/
+  inflating: Payload/Galera.app/Galera
+   creating: Payload/Galera.app/Base.lproj/
+   creating: Payload/Galera.app/Base.lproj/LaunchScreen.storyboardc/
+  inflating: Payload/Galera.app/Base.lproj/LaunchScreen.storyboardc/01J-lp-oVM-view-Ze5-6b-2t3.nib
+  inflating: Payload/Galera.app/Base.lproj/LaunchScreen.storyboardc/UIViewController-01J-lp-oVM.nib
+  inflating: Payload/Galera.app/Base.lproj/LaunchScreen.storyboardc/Info.plist
+   creating: Payload/Galera.app/Base.lproj/Main.storyboardc/
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/BYZ-38-t0r-view-8bC-Xf-vdC.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/OS8-at-wSr-view-h4b-SP-lrB.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/UIViewController-qFL-ON-XXG.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/MainNavigationViewController.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/XJe-B7-Q8x-view-zsP-ba-LeN.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/UIViewController-wnA-UJ-Lzf.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/jey-NU-HkL-view-aGf-ia-qEJ.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/afu-Ef-8r8-view-Isf-IX-avJ.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/qFL-ON-XXG-view-351-VT-mQx.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/UIViewController-jey-NU-HkL.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/Info.plist
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/UIViewController-OS8-at-wSr.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/wnA-UJ-Lzf-view-FfP-lE-HrX.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/WelcomeNavigationController.nib
+  inflating: Payload/Galera.app/Base.lproj/Main.storyboardc/LoginViewControllerID.nib
+   creating: Payload/Galera.app/_CodeSignature/
+  inflating: Payload/Galera.app/_CodeSignature/CodeResources
+  inflating: Payload/Galera.app/ScheduleTableViewCell.nib
+  inflating: Payload/Galera.app/Info.plist
+  extracting: Payload/Galera.app/PkgInfo
+  inflating: Payload/Galera.app/embedded.mobileprovision
+```
+
+The archive contains a binary executable file, Galera:
+
+```sh
+[amyasnikov@ubuntu:~]$ file Payload/Galera.app/Galera
+Payload/Galera.app/Galera: Mach-O 64-bit executable arm64
+```
+
+Nothing else interesting in the archive.
+
+### Analyzing the Galera File
+
+Use the online decompiler [dogbolt.org](https://dogbolt.org). Upload the Galera file and select the Hex-Rays decompiler. Other decompilers give much worse results for this file.
+
+The output contains only 3433 lines of C code. In this code you can notice the processing of HTTP requests: endpoints, methods, request parameters and responses are visible.
+
+An example of such a function:
+
+File `CreateAccounViewController.c`:
+
+<CodeFile file="CreateAccounViewController.c" />
+
+### Reconstructing the REST Requests
+
+Based on the C code and experimentation, you can reconstruct all the endpoints and understand how to use them.
+
+Creating a user. Specify a username, password and optionally a code:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -X POST https://t-galera-u12p5koe.spbctf.net/create \
+  -H 'Content-Type: application/json' \
+  --data '{"username": "<username>", "password": "<password>", "ref_code": "<ref_code>" }'
+
+User created
+```
+
+Authentication. The response contains a token:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -s -X POST "https://t-galera-u12p5koe.spbctf.net/enter" \
+  -H "Content-Type: application/json" \
+  --data '{"username": "user_1001", "password": "user_1001"}'
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjM2ODAwMywidXNlcm5hbWUiOiJ1c2VyXzEwMDEiLCJleHAiOjE3MTM5OTI1OTV9.TNVl9ZkE_DLEpf92GcNO8xJFLE7f8L_eW1ie7ebc6sw
+```
+
+Creating a referral code:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -s "https://t-galera-u12p5koe.spbctf.net/ref" \
+  -H "Authorization: $TOKEN"
+
+GALERA-12556ce0
+```
+
+Getting user information:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -s "https://t-galera-u12p5koe.spbctf.net/profile" \
+  -H "Authorization: $TOKEN" | jq
+
+{
+  "username": "user_1001",
+  "points": 1,
+  "position": "Junior Developer",
+  "purchases": [
+    {
+      "time": "2024-04-22T21:12:07.568817Z",
+      "description": "Nice pen with the company logo",
+      "price": 15
+    }
+  ]
+}
+```
+
+List of items you can spend points on:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -s "https://t-galera-u12p5koe.spbctf.net/items" | jq
+
+[
+  {
+    "id": 1,
+    "price": 15,
+    "name": "Pen",
+    "description": "Nice pen with the company logo"
+  },
+  {
+    "id": 2,
+    "price": 30,
+    "name": "Coffee break",
+    "description": "Free coffee break on Friday"
+  },
+  {
+    "id": 1337,
+    "price": 1337,
+    "name": "Freedom",
+    "description": "Freedom from the shackles of slavery"
+  }
+]
+```
+
+Buying an item from the list:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -s "https://t-galera-u12p5koe.spbctf.net/buy?id=1" \
+  -H "Authorization: $TOKEN"
+
+Purchase successful
+```
+
+### Flag Acquisition Strategy
+
+To get the flag, you need to buy freedom for 1337 points. Points are awarded for registering with a referral code, 100 points per user. A referral code can be created and used only once.
+
+Create one user without a code. Create a referral code. Then create many users with this code in parallel, hoping the server won't reset the code in time.
+
+### Writing the Solver Script
+
+Write a simple bash script that calls the required endpoints via curl. The full script:
+
+File `solve.sh`:
+
+<CodeFile file="solve.sh" />
+
+### Getting the Flag
+
+Run the bash script:
+
+```bash
+[amyasnikov@ubuntu:~]$ bash ./script.sh
+User created
+Purchase successful
+{
+  "username": "user_1713821702",
+  "points": 1179,
+  "position": "Senior Developer",
+  "purchases": [
+    {
+      "time": "2024-04-22T21:35:10.726617Z",
+      "description": "Freedom from the shackles of slavery tctf{1O5_4RM_r3VERSe_Race_aNd_W1N}",
+      "price": 1337
+    }
+  ]
+}
+```
+
+Using the one-time code, we registered 25 users and got +2500 points, almost twice as much as needed.
+
+Got the flag `tctf{1O5_4RM_r3VERSe_Race_aNd_W1N}`.
+
+## Links
+
+* [Decompiler Explorer](https://dogbolt.org)
+
+## Conclusion
+
+* Most likely, similar operations can be performed on some online platforms.

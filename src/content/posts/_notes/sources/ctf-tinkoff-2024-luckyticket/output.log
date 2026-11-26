@@ -1,0 +1,350 @@
+[amyasnikov@ubuntu:~]$ go run main.go
+
+login response: {"message":"login successful"}
+userInfo: &{Username:user_demo_673010487 Balance:5000 Luck:0}
+ticket=839872 seedServer=1712276035148 seed=1712275959470 deltaSeed=-75678
+ticket=622307 seedServer=1712276036025 seed=1712275983712 deltaSeed=-52313
+ticket=916968 seedServer=1712276035091 seed=1712276035143 deltaSeed=52
+ticket=839872 seedServer=1712276035148 seed=1712276035199 deltaSeed=51
+ticket=336541 seedServer=1712276035202 seed=1712276035252 deltaSeed=50
+ticket=954018 seedServer=1712276035264 seed=1712276035314 deltaSeed=50
+ticket=489086 seedServer=1712276035319 seed=1712276035370 deltaSeed=51
+ticket=507683 seedServer=1712276035371 seed=1712276035422 deltaSeed=51
+ticket=277421 seedServer=1712276035427 seed=1712276035478 deltaSeed=51
+ticket=091775 seedServer=1712276035478 seed=1712276035528 deltaSeed=50
+ticket=204761 seedServer=1712276035528 seed=1712276035578 deltaSeed=50
+ticket=886574 seedServer=1712276035585 seed=1712276035635 deltaSeed=50
+ticket=145275 seedServer=1712276035640 seed=1712276035690 deltaSeed=50
+ticket=309397 seedServer=1712276035690 seed=1712276035740 deltaSeed=50
+ticket=435633 seedServer=1712276035746 seed=1712276035796 deltaSeed=50
+ticket=071242 seedServer=1712276035805 seed=1712276035855 deltaSeed=50
+ticket=008095 seedServer=1712276035868 seed=1712276035918 deltaSeed=50
+ticket=198127 seedServer=1712276035919 seed=1712276035970 deltaSeed=51
+ticket=906314 seedServer=1712276035970 seed=1712276036020 deltaSeed=50
+ticket=622307 seedServer=1712276036025 seed=1712276036082 deltaSeed=57
+ticket=048568 seedServer=1712276036088 seed=1712276036140 deltaSeed=52
+ticket=198223 seedServer=1712276036153 seed=1712276036203 deltaSeed=50
+ticket=204761 seedServer=1712276035528 seed=1712276042537 deltaSeed=7009
+ticket=954018 seedServer=1712276035264 seed=1712276075719 deltaSeed=40455
+deltaTime: 50
+ticket: &{ID:197381 Number:249078 Status:active}
+luckTicket: &{Luck:1 Ticket:249078}
+ticket: &{ID:197382 Number:487748 Status:active}
+luckTicket: &{Luck:1 Ticket:487748}
+ticket: &{ID:197383 Number:748223 Status:active}
+ticket: &{ID:197384 Number:248254 Status:active}
+ticket: &{ID:197386 Number:078046 Status:active}
+ticket: &{ID:197387 Number:916871 Status:active}
+luckTicket: &{Luck:1 Ticket:916871}
+ticket: &{ID:197389 Number:166479 Status:active}
+ticket: &{ID:197390 Number:856385 Status:active}
+ticket: &{ID:197391 Number:970088 Status:active}
+luckTicket: &{Luck:1 Ticket:970088}
+ticket: &{ID:197392 Number:649829 Status:active}
+luckTicket: &{Luck:1 Ticket:649829}
+ticket: &{ID:197394 Number:464104 Status:active}
+ticket: &{ID:197395 Number:029209 Status:active}
+luckTicket: &{Luck:1 Ticket:029209}
+ticket: &{ID:197396 Number:905815 Status:active}
+luckTicket: &{Luck:1 Ticket:905815}
+ticket: &{ID:197397 Number:543776 Status:active}
+ticket: &{ID:197399 Number:845395 Status:active}
+luckTicket: &{Luck:1 Ticket:845395}
+ticket: &{ID:197400 Number:077094 Status:active}
+ticket: &{ID:197401 Number:526166 Status:active}
+luckTicket: &{Luck:1 Ticket:526166}
+ticket: &{ID:197403 Number:763547 Status:active}
+luckTicket: &{Luck:1 Ticket:763547}
+ticket: &{ID:197404 Number:038565 Status:active}
+ticket: &{ID:197405 Number:191230 Status:active}
+ticket: &{ID:197406 Number:337722 Status:active}
+ticket: &{ID:197407 Number:755881 Status:active}
+luckTicket: &{Luck:1 Ticket:755881}
+ticket: &{ID:197408 Number:381280 Status:active}
+ticket: &{ID:197410 Number:857794 Status:active}
+luckTicket: &{Luck:1 Ticket:857794}
+ticket: &{ID:197411 Number:850832 Status:active}
+luckTicket: &{Luck:1 Ticket:850832}
+ticket: &{ID:197413 Number:918610 Status:active}
+ticket: &{ID:197414 Number:853439 Status:active}
+luckTicket: &{Luck:1 Ticket:853439}
+ticket: &{ID:197415 Number:610872 Status:active}
+ticket: &{ID:197416 Number:798247 Status:active}
+ticket: &{ID:197417 Number:036117 Status:active}
+luckTicket: &{Luck:1 Ticket:036117}
+ticket: &{ID:197418 Number:851095 Status:active}
+luckTicket: &{Luck:1 Ticket:851095}
+ticket: &{ID:197421 Number:675737 Status:active}
+ticket: &{ID:197422 Number:468738 Status:active}
+luckTicket: &{Luck:1 Ticket:468738}
+ticket: &{ID:197423 Number:071409 Status:active}
+ticket: &{ID:197424 Number:457650 Status:active}
+ticket: &{ID:197425 Number:453417 Status:active}
+luckTicket: &{Luck:1 Ticket:453417}
+ticket: &{ID:197426 Number:904729 Status:active}
+ticket: &{ID:197428 Number:308227 Status:active}
+luckTicket: &{Luck:1 Ticket:308227}
+ticket: &{ID:197429 Number:117171 Status:active}
+luckTicket: &{Luck:1 Ticket:117171}
+ticket: &{ID:197430 Number:595964 Status:active}
+luckTicket: &{Luck:1 Ticket:595964}
+ticket: &{ID:197432 Number:229634 Status:active}
+luckTicket: &{Luck:1 Ticket:229634}
+ticket: &{ID:197433 Number:057741 Status:active}
+luckTicket: &{Luck:1 Ticket:057741}
+ticket: &{ID:197434 Number:907648 Status:active}
+ticket: &{ID:197435 Number:158824 Status:active}
+luckTicket: &{Luck:1 Ticket:158824}
+ticket: &{ID:197436 Number:395368 Status:active}
+luckTicket: &{Luck:1 Ticket:395368}
+ticket: &{ID:197437 Number:980458 Status:active}
+luckTicket: &{Luck:1 Ticket:980458}
+ticket: &{ID:197439 Number:221099 Status:active}
+ticket: &{ID:197440 Number:475567 Status:active}
+ticket: &{ID:197441 Number:754904 Status:active}
+ticket: &{ID:197442 Number:315452 Status:active}
+ticket: &{ID:197443 Number:455207 Status:active}
+ticket: &{ID:197444 Number:295000 Status:active}
+ticket: &{ID:197446 Number:487487 Status:active}
+luckTicket: &{Luck:1 Ticket:487487}
+ticket: &{ID:197447 Number:444480 Status:active}
+luckTicket: &{Luck:1 Ticket:444480}
+ticket: &{ID:197449 Number:108432 Status:active}
+luckTicket: &{Luck:1 Ticket:108432}
+ticket: &{ID:197450 Number:193553 Status:active}
+luckTicket: &{Luck:1 Ticket:193553}
+ticket: &{ID:197451 Number:247823 Status:active}
+luckTicket: &{Luck:1 Ticket:247823}
+ticket: &{ID:197452 Number:945060 Status:active}
+ticket: &{ID:197453 Number:575613 Status:active}
+ticket: &{ID:197455 Number:642161 Status:active}
+ticket: &{ID:197456 Number:297630 Status:active}
+ticket: &{ID:197457 Number:265824 Status:active}
+ticket: &{ID:197458 Number:807754 Status:active}
+ticket: &{ID:197460 Number:717629 Status:active}
+ticket: &{ID:197462 Number:247292 Status:active}
+luckTicket: &{Luck:1 Ticket:247292}
+ticket: &{ID:197463 Number:320325 Status:active}
+ticket: &{ID:197464 Number:516471 Status:active}
+luckTicket: &{Luck:1 Ticket:516471}
+ticket: &{ID:197466 Number:375168 Status:active}
+luckTicket: &{Luck:1 Ticket:375168}
+ticket: &{ID:197467 Number:714933 Status:active}
+ticket: &{ID:197468 Number:884269 Status:active}
+ticket: &{ID:197469 Number:880349 Status:active}
+luckTicket: &{Luck:1 Ticket:880349}
+ticket: &{ID:197470 Number:815680 Status:active}
+luckTicket: &{Luck:1 Ticket:815680}
+ticket: &{ID:197473 Number:613622 Status:active}
+luckTicket: &{Luck:1 Ticket:613622}
+ticket: &{ID:197474 Number:406532 Status:active}
+luckTicket: &{Luck:1 Ticket:406532}
+ticket: &{ID:197476 Number:516173 Status:active}
+ticket: &{ID:197477 Number:411444 Status:active}
+ticket: &{ID:197478 Number:694228 Status:active}
+ticket: &{ID:197479 Number:407102 Status:active}
+ticket: &{ID:197480 Number:249849 Status:active}
+ticket: &{ID:197481 Number:248950 Status:active}
+luckTicket: &{Luck:1 Ticket:248950}
+ticket: &{ID:197482 Number:647296 Status:active}
+luckTicket: &{Luck:1 Ticket:647296}
+ticket: &{ID:197483 Number:540351 Status:active}
+luckTicket: &{Luck:1 Ticket:540351}
+ticket: &{ID:197484 Number:917962 Status:active}
+luckTicket: &{Luck:1 Ticket:917962}
+ticket: &{ID:197485 Number:961862 Status:active}
+luckTicket: &{Luck:1 Ticket:961862}
+ticket: &{ID:197487 Number:188827 Status:active}
+luckTicket: &{Luck:1 Ticket:188827}
+ticket: &{ID:197488 Number:905266 Status:active}
+luckTicket: &{Luck:1 Ticket:905266}
+ticket: &{ID:197490 Number:306552 Status:active}
+ticket: &{ID:197491 Number:369266 Status:active}
+ticket: &{ID:197492 Number:493933 Status:active}
+ticket: &{ID:197493 Number:485287 Status:active}
+luckTicket: &{Luck:1 Ticket:485287}
+ticket: &{ID:197494 Number:396459 Status:active}
+luckTicket: &{Luck:1 Ticket:396459}
+ticket: &{ID:197496 Number:702522 Status:active}
+luckTicket: &{Luck:1 Ticket:702522}
+ticket: &{ID:197497 Number:635707 Status:active}
+luckTicket: &{Luck:1 Ticket:635707}
+ticket: &{ID:197499 Number:049662 Status:active}
+ticket: &{ID:197501 Number:527662 Status:active}
+luckTicket: &{Luck:1 Ticket:527662}
+ticket: &{ID:197502 Number:782831 Status:active}
+ticket: &{ID:197503 Number:626750 Status:active}
+ticket: &{ID:197504 Number:437923 Status:active}
+luckTicket: &{Luck:1 Ticket:437923}
+ticket: &{ID:197505 Number:075174 Status:active}
+luckTicket: &{Luck:1 Ticket:075174}
+ticket: &{ID:197507 Number:430706 Status:active}
+ticket: &{ID:197508 Number:037901 Status:active}
+luckTicket: &{Luck:1 Ticket:037901}
+ticket: &{ID:197509 Number:160025 Status:active}
+luckTicket: &{Luck:1 Ticket:160025}
+ticket: &{ID:197510 Number:151775 Status:active}
+ticket: &{ID:197511 Number:663238 Status:active}
+ticket: &{ID:197512 Number:325190 Status:active}
+luckTicket: &{Luck:1 Ticket:325190}
+ticket: &{ID:197513 Number:270351 Status:active}
+luckTicket: &{Luck:1 Ticket:270351}
+ticket: &{ID:197515 Number:686030 Status:active}
+ticket: &{ID:197516 Number:475783 Status:active}
+ticket: &{ID:197517 Number:306359 Status:active}
+ticket: &{ID:197518 Number:471282 Status:active}
+luckTicket: &{Luck:1 Ticket:471282}
+ticket: &{ID:197520 Number:797109 Status:active}
+ticket: &{ID:197522 Number:620632 Status:active}
+ticket: &{ID:197523 Number:639841 Status:active}
+ticket: &{ID:197525 Number:464842 Status:active}
+luckTicket: &{Luck:1 Ticket:464842}
+ticket: &{ID:197526 Number:254524 Status:active}
+luckTicket: &{Luck:1 Ticket:254524}
+ticket: &{ID:197528 Number:114695 Status:active}
+ticket: &{ID:197529 Number:254573 Status:active}
+ticket: &{ID:197530 Number:671757 Status:active}
+ticket: &{ID:197531 Number:733319 Status:active}
+luckTicket: &{Luck:1 Ticket:733319}
+ticket: &{ID:197532 Number:526913 Status:active}
+luckTicket: &{Luck:1 Ticket:526913}
+ticket: &{ID:197533 Number:319554 Status:active}
+ticket: &{ID:197534 Number:173236 Status:active}
+luckTicket: &{Luck:1 Ticket:173236}
+ticket: &{ID:197535 Number:168618 Status:active}
+luckTicket: &{Luck:1 Ticket:168618}
+ticket: &{ID:197536 Number:557980 Status:active}
+luckTicket: &{Luck:1 Ticket:557980}
+ticket: &{ID:197537 Number:904418 Status:active}
+luckTicket: &{Luck:1 Ticket:904418}
+ticket: &{ID:197539 Number:751418 Status:active}
+luckTicket: &{Luck:1 Ticket:751418}
+ticket: &{ID:197540 Number:462389 Status:active}
+ticket: &{ID:197541 Number:217820 Status:active}
+luckTicket: &{Luck:1 Ticket:217820}
+ticket: &{ID:197542 Number:339870 Status:active}
+luckTicket: &{Luck:1 Ticket:339870}
+ticket: &{ID:197543 Number:800107 Status:active}
+luckTicket: &{Luck:1 Ticket:800107}
+ticket: &{ID:197545 Number:656926 Status:active}
+luckTicket: &{Luck:1 Ticket:656926}
+ticket: &{ID:197546 Number:156274 Status:active}
+ticket: &{ID:197547 Number:585785 Status:active}
+ticket: &{ID:197549 Number:147245 Status:active}
+ticket: &{ID:197550 Number:561607 Status:active}
+ticket: &{ID:197552 Number:006769 Status:active}
+ticket: &{ID:197553 Number:848277 Status:active}
+ticket: &{ID:197554 Number:269257 Status:active}
+ticket: &{ID:197555 Number:703109 Status:active}
+luckTicket: &{Luck:1 Ticket:703109}
+ticket: &{ID:197556 Number:918353 Status:active}
+ticket: &{ID:197558 Number:110592 Status:active}
+ticket: &{ID:197560 Number:036711 Status:active}
+luckTicket: &{Luck:1 Ticket:036711}
+ticket: &{ID:197561 Number:586541 Status:active}
+ticket: &{ID:197562 Number:915360 Status:active}
+ticket: &{ID:197563 Number:188930 Status:active}
+ticket: &{ID:197564 Number:296129 Status:active}
+ticket: &{ID:197566 Number:755815 Status:active}
+ticket: &{ID:197567 Number:167707 Status:active}
+luckTicket: &{Luck:1 Ticket:167707}
+ticket: &{ID:197568 Number:252252 Status:active}
+luckTicket: &{Luck:1 Ticket:252252}
+ticket: &{ID:197570 Number:924830 Status:active}
+ticket: &{ID:197571 Number:594797 Status:active}
+ticket: &{ID:197572 Number:742508 Status:active}
+luckTicket: &{Luck:1 Ticket:742508}
+ticket: &{ID:197573 Number:911347 Status:active}
+ticket: &{ID:197574 Number:381778 Status:active}
+ticket: &{ID:197575 Number:606660 Status:active}
+luckTicket: &{Luck:1 Ticket:606660}
+ticket: &{ID:197576 Number:282189 Status:active}
+ticket: &{ID:197578 Number:676419 Status:active}
+ticket: &{ID:197579 Number:138351 Status:active}
+ticket: &{ID:197581 Number:762795 Status:active}
+ticket: &{ID:197582 Number:564492 Status:active}
+luckTicket: &{Luck:1 Ticket:564492}
+ticket: &{ID:197584 Number:345624 Status:active}
+luckTicket: &{Luck:1 Ticket:345624}
+ticket: &{ID:197585 Number:722974 Status:active}
+ticket: &{ID:197587 Number:274757 Status:active}
+ticket: &{ID:197588 Number:998456 Status:active}
+ticket: &{ID:197589 Number:108357 Status:active}
+ticket: &{ID:197591 Number:604836 Status:active}
+ticket: &{ID:197592 Number:697557 Status:active}
+ticket: &{ID:197593 Number:685388 Status:active}
+luckTicket: &{Luck:1 Ticket:685388}
+ticket: &{ID:197595 Number:974930 Status:active}
+ticket: &{ID:197596 Number:513153 Status:active}
+luckTicket: &{Luck:1 Ticket:513153}
+ticket: &{ID:197597 Number:727557 Status:active}
+ticket: &{ID:197598 Number:473275 Status:active}
+luckTicket: &{Luck:1 Ticket:473275}
+ticket: &{ID:197599 Number:395490 Status:active}
+ticket: &{ID:197601 Number:586974 Status:active}
+ticket: &{ID:197602 Number:188864 Status:active}
+ticket: &{ID:197603 Number:764407 Status:active}
+ticket: &{ID:197604 Number:278374 Status:active}
+ticket: &{ID:197605 Number:321312 Status:active}
+luckTicket: &{Luck:1 Ticket:321312}
+ticket: &{ID:197607 Number:981423 Status:active}
+ticket: &{ID:197608 Number:412775 Status:active}
+ticket: &{ID:197609 Number:837847 Status:active}
+ticket: &{ID:197610 Number:059713 Status:active}
+ticket: &{ID:197611 Number:833327 Status:active}
+ticket: &{ID:197612 Number:026531 Status:active}
+ticket: &{ID:197614 Number:502743 Status:active}
+ticket: &{ID:197615 Number:128005 Status:active}
+ticket: &{ID:197617 Number:186373 Status:active}
+ticket: &{ID:197618 Number:900208 Status:active}
+ticket: &{ID:197619 Number:465750 Status:active}
+ticket: &{ID:197621 Number:820125 Status:active}
+ticket: &{ID:197622 Number:725185 Status:active}
+luckTicket: &{Luck:1 Ticket:725185}
+ticket: &{ID:197623 Number:413398 Status:active}
+ticket: &{ID:197624 Number:137182 Status:active}
+luckTicket: &{Luck:1 Ticket:137182}
+ticket: &{ID:197625 Number:022301 Status:active}
+luckTicket: &{Luck:1 Ticket:022301}
+ticket: &{ID:197627 Number:018405 Status:active}
+luckTicket: &{Luck:1 Ticket:018405}
+ticket: &{ID:197629 Number:214502 Status:active}
+luckTicket: &{Luck:1 Ticket:214502}
+ticket: &{ID:197630 Number:585576 Status:active}
+luckTicket: &{Luck:1 Ticket:585576}
+ticket: &{ID:197631 Number:117234 Status:active}
+luckTicket: &{Luck:1 Ticket:117234}
+ticket: &{ID:197632 Number:768552 Status:active}
+ticket: &{ID:197633 Number:036180 Status:active}
+luckTicket: &{Luck:1 Ticket:036180}
+ticket: &{ID:197634 Number:255813 Status:active}
+luckTicket: &{Luck:1 Ticket:255813}
+ticket: &{ID:197635 Number:523934 Status:active}
+ticket: &{ID:197637 Number:992893 Status:active}
+luckTicket: &{Luck:1 Ticket:992893}
+ticket: &{ID:197638 Number:246244 Status:active}
+ticket: &{ID:197639 Number:833707 Status:active}
+luckTicket: &{Luck:1 Ticket:833707}
+ticket: &{ID:197640 Number:808871 Status:active}
+luckTicket: &{Luck:1 Ticket:808871}
+ticket: &{ID:197642 Number:556394 Status:active}
+luckTicket: &{Luck:1 Ticket:556394}
+ticket: &{ID:197643 Number:454085 Status:active}
+luckTicket: &{Luck:1 Ticket:454085}
+ticket: &{ID:197645 Number:051264 Status:active}
+ticket: &{ID:197646 Number:644710 Status:active}
+ticket: &{ID:197647 Number:147651 Status:active}
+luckTicket: &{Luck:1 Ticket:147651}
+ticket: &{ID:197648 Number:254094 Status:active}
+ticket: &{ID:197649 Number:656703 Status:active}
+ticket: &{ID:197650 Number:140839 Status:active}
+ticket: &{ID:197651 Number:482527 Status:active}
+luckTicket: &{Luck:1 Ticket:482527}
+ticket: &{ID:197652 Number:729378 Status:active}
+luckTicket: &{Luck:1 Ticket:729378}
+ticket: &{ID:197653 Number:338516 Status:active}
+ticket: &{ID:197655 Number:786565 Status:active}
+ticket: &{ID:197656 Number:183543 Status:active}
+luckTicket: &{Luck:1 Ticket:183543}
+userInfo: &{Username:user_demo_673010487 Balance:2610 Luck:100}
+flag: &{tctf{n0w_y0u_4r3_7h3_lucky_0wn3r_0f_4bd0m1n4l_p41n}}

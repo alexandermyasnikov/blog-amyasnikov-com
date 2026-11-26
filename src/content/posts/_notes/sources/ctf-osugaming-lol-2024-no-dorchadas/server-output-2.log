@@ -1,0 +1,19 @@
+[amyasnikov@ubuntu:~]$ nc chal.osugaming.lol 9***
+Welcome to the osu! Beatmap Signer
+
+--------------------------
+| [1] Sign a beatmap     |
+| [2] Verify a beatmap   |
+--------------------------
+Enter your option: 1
+Enter your beatmap in base64: X19fX19fX19fX19fLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLg==
+Okay, I've signed that for you: 5cea859a5d3186608d5e210b2ef920bd
+
+--------------------------
+| [1] Sign a beatmap     |
+| [2] Verify a beatmap   |
+--------------------------
+Enter your option: 2
+Enter your beatmap in base64: X19fX19fX19fX19fLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAAAAAAAAwLDMyOCwzMzI5Nyw2LDAsQnw0ODozMjN8NjE6Mjc0fDYxOjI3NHw0NToyMDd8NDU6MjA3fDYzOjE2OXwxMDM6MTY5fDEwMzoxNjl8MjQ5OjE5OXwyNDk6MTk5fDIxNToyMTR8MjA1OjI1NCwxLDQ1MC4wMDAwMTcxNjYxMzgsNnw2LDE6MXwyOjEsMDowOjA6MDpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
+Enter your signature for that beatmap: 2dd237915047bb057d18e7f31b6f73a0
+How did you add that dorchadas slider?? Anyway, here's a flag: osu{********************}

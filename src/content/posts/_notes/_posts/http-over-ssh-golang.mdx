@@ -14,7 +14,8 @@ tags:
 ---
 
 import CodeFile from "@/custom/CodeFile.astro";
-import wiresharkWebp from '../assets/http-over-ssh-golang/wireshark.webp?url';
+import { Image } from 'astro:assets';
+import wiresharkWebp from '../assets/http-over-ssh-golang/wireshark.webp';
 
 
 ## HTTP over SSH in Go
@@ -134,14 +135,14 @@ tcpdump -i any -A -s 0 -X -nn -l port 8000
 ```
 
 Establishing a TCP connection. The three-way handshake: `SYN`, `SYN`-`ACK`, `ACK`:
-```tcpdump
+```text
 20:15:41.376906 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [S], seq 3363993963, win 65495, options [mss 65495,sackOK,TS val 3490232963 ecr 0,nop,wscale 8], length 0
 20:15:41.376939 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [S.], seq 2708443969, ack 3363993964, win 65483, options [mss 65495,sackOK,TS val 3490232963 ecr 3490232963,nop,wscale 8], length 0
 20:15:41.376962 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [.], ack 1, win 256, options [nop,nop,TS val 3490232963 ecr 3490232963], length 0
 ```
 
 `socat` sent the `HTTP` request, server acknowledged receipt:
-```tcpdump
+```text
 20:15:41.377051 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [P.], seq 1:121, ack 1, win 256, options [nop,nop,TS val 3490232963 ecr 3490232963], length 120
 	0x0000:  4500 00ac ccd1 4000 4006 6f78 7f00 0001  E.....@.@.ox....
 	0x0010:  7f00 0001 b692 1f40 c882 796c a16f 9342  .......@..yl.o.B
@@ -158,7 +159,7 @@ Establishing a TCP connection. The three-way handshake: `SYN`, `SYN`-`ACK`, `ACK
 ```
 
 Server sent the response, `socat` acknowledged receipt:
-```tcpdump
+```text
 20:15:41.377910 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [P.], seq 1:125, ack 121, win 256, options [nop,nop,TS val 3490232964 ecr 3490232963], length 124
 	0x0000:  4500 00b0 39ed 4000 4006 0259 7f00 0001  E...9.@.@..Y....
 	0x0010:  7f00 0001 1f40 b692 a16f 9342 c882 79e4  .....@...o.B..y.
@@ -193,7 +194,7 @@ Server sent the response, `socat` acknowledged receipt:
 ```
 
 Closing the `TCP` connection. The server closes the connection and the client acknowledges. Then the client closes the connection and the server acknowledges:
-```tcpdump
+```text
 20:15:41.378091 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [F.], seq 316, ack 121, win 256, options [nop,nop,TS val 3490232964 ecr 3490232964], length 0
 20:15:41.418927 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [.], ack 317, win 256, options [nop,nop,TS val 3490233005 ecr 3490232964], length 0
 20:15:41.878718 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [F.], seq 121, ack 317, win 256, options [nop,nop,TS val 3490233464 ecr 3490232964], length 0
@@ -212,4 +213,4 @@ ssh root@remote-host  "tcpdump -i any -U -s0 -w - 'port 8000'" | wireshark -k -i
 ```
 
 In `Wireshark`, you get the same data as in `tcpdump`, but `Wireshark` is more convenient to use.
-![wireshark](wiresharkWebp)
+<Image src={wiresharkWebp} alt="wireshark" />

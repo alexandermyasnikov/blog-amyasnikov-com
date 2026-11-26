@@ -1,0 +1,142 @@
+---
+title: No Dorchadas — osu!gaming CTF 2024
+description: "Forging a valid MD5 signature for an osu! beatmap that contains a forbidden dorchadas slider, by recovering the internal MD5 state from a known signature and extending it."
+pubDatetime: 2024-03-19
+tags:
+    - CTF
+    - cryptography
+    - osugaming.lol
+    - Golang
+    - Python
+    - MD5
+    - length extension attack
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import serverPy from '../assets/ctf-osugaming-lol-2024-no-dorchadas/server.py?url';
+
+
+## Initial Data
+
+**Task link**
+[crypto/no-dorchadas](https://ctf.osugaming.lol/challs)
+
+**Description**
+i hate dorchadas!!!
+
+**Server**
+`nc chal.osugaming.lol 9***`
+
+**Files**
+<a href={serverPy}>Download server.py</a>
+
+## Solution
+
+### Input Analysis
+
+Let's look at what `server.py` contains:
+
+<CodeFile file="server.py" />
+
+The server computes a `signature` for a beatmap that does not contain the marker (dorchadas). To get the flag, we need to submit a beatmap that contains the marker along with a valid `signature`.
+
+The `signature` is computed with the md5 algorithm from the string `secret_slider + beatmap`:
+
+```python
+def sign(beatmap):
+    hsh = md5(secret_slider + beatmap)
+    return hsh.hexdigest()
+```
+
+### Analysis of the md5 Algorithm
+
+Let's look at how the md5 algorithm is implemented in the Go standard library `crypto/md5`:
+
+<CodeFile file="md5.go" />
+
+The `Write` method processes the input string in blocks of 64 bytes. There is an internal state (four 32-bit numbers — `dig.s[0]`, `dig.s[1]`, `dig.s[2]`, `dig.s[3]`), which changes after each block is processed.
+
+The hash is built from these same numbers:
+
+```go
+func (d *digest) checkSum() [Size]byte {
+    ...
+    var digest [Size]byte
+    binary.LittleEndian.PutUint32(digest[0:], d.s[0])
+    binary.LittleEndian.PutUint32(digest[4:], d.s[1])
+    binary.LittleEndian.PutUint32(digest[8:], d.s[2])
+    binary.LittleEndian.PutUint32(digest[12:], d.s[3])
+    return digest
+}
+```
+
+At the end, a buffer is added that contains the size of the original string and a filler of zeros up to the 64-byte block boundary:
+
+```go
+func (d *digest) checkSum() [Size]byte {
+    ...
+    tmp := [1 + 63 + 8]byte{0x80}
+    pad := (55 - d.len) % 64                             // calculate number of padding bytes
+    binary.LittleEndian.PutUint64(tmp[1+pad:], d.len<<3) // append length in bits
+    d.Write(tmp[:1+pad+8])
+    ...
+}
+```
+
+Don't forget the alignment to 64 bytes.
+
+So, knowing the length of `secret_slider`, we can say exactly what padding will be computed.
+
+Plan:
+* Choose an arbitrary `beatmap0` that does not contain `dorchadas_slider`, so that the length of `secret_slider+beatmap0` is a multiple of 64
+* Send `beatmap0` to the server and receive `signature0`
+* Choose a new `beatmap1` as `beatmap0 + padding0 + dorchadas_slider + padding1`
+    * `padding0` is the padding that would be computed for `secret_slider+beatmap`
+    * `padding1` is arbitrary padding to make the total string length a multiple of 64
+* Create a new `md5.hash` structure with the internal state `dig.s[0]`, `dig.s[1]`, `dig.s[2]`, `dig.s[3]` from `signature0`
+* Append `dorchadas_slider + padding1` and get the md5 hash, which will be the sought `signature1`
+
+### Checking the Algorithm on Test Data
+
+Following the plan, let's write a program in Go.
+
+The hardest part here is computing the padding correctly. And the moment of initializing the hash structure with the required state was very non-obvious.
+
+<CodeFile file="main.go" />
+
+Run the program:
+
+<CodeFile file="main-output-1.log" />
+
+We see that we managed to obtain the correct `signature1` without knowing `secret_slider`, knowing only the length of `secret_slider`, `beatmap0` and `signature0`.
+
+### Getting the Flag
+
+Connect to the server. Enter `beatmap0`. Receive `signature0`.
+
+<CodeFile file="server-output-1.log" />
+
+Emulate the computation of `signature0`, explicitly setting the value that the server sent.
+
+```diff
+  beatmap0 := secretPadding + strings.Repeat(".", 64)
+  signature0 := sign(beatmap0)
++ signature0 = "5cea859a5d3186608d5e210b2ef920bd"
+  fmt.Printf("beatmap0 str: %q\n", beatmap0)
+  fmt.Printf("beatmap0 base64: %q\n", base64.StdEncoding.EncodeToString([]byte(beatmap0)))
+```
+
+Run the program:
+
+<CodeFile file="main-output-2.log" />
+
+Validation failed because we substituted `signature0`. We pass the computed `signature1` to the server to validate `beatmap1`.
+
+<CodeFile file="server-output-2.log" />
+
+## Useful Resources
+* [Length extension attack - wikipedia](https://en.wikipedia.org/wiki/Length_extension_attack)
+
+---
+
+P.S. Some data is replaced with asterisks

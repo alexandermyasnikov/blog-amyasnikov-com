@@ -1,0 +1,18 @@
+#!/run/workspace/bin/python3
+
+from base64 import b64encode
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+
+import sys
+
+key = open("/home/hacker/challenge/.key", "rb").read()
+cipher = AES.new(key=key, mode=AES.MODE_CBC)
+
+if len(sys.argv) > 1 and sys.argv[1] == "flag":
+    plaintext = open("/home/hacker/challenge/flag", "rb").read().strip()
+else:
+    plaintext = b"sleep"
+
+ciphertext = cipher.iv + cipher.encrypt(pad(plaintext, cipher.block_size))
+print(f"TASK: {b64encode(ciphertext).decode()}")

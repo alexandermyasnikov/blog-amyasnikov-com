@@ -1,0 +1,16 @@
+[amyasnikov@ubuntu:~]$ go run main.go
+
+secret_slider: 244 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+beatmap0 str: "____________................................................................"
+beatmap0 base64: "X19fX19fX19fX19fLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLg=="
+has_dorchadas: false
+signature0: 329b5c185bffbb153faf53d9ed584050
+
+padding 320 8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000
+beatmap1 str: "____________................................................................\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x000,328,33297,6,0,B|48:323|61:274|61:274|45:207|45:207|63:169|103:169|103:169|249:199|249:199|215:214|205:254,1,450.000017166138,6|6,1:1|2:1,0:0:0:0:_____________________________________________"
+beatmap1 base64: "X19fX19fX19fX19fLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAAAAAAAAwLDMyOCwzMzI5Nyw2LDAsQnw0ODozMjN8NjE6Mjc0fDYxOjI3NHw0NToyMDd8NDU6MjA3fDYzOjE2OXwxMDM6MTY5fDEwMzoxNjl8MjQ5OjE5OXwyNDk6MTk5fDIxNToyMTR8MjA1OjI1NCwxLDQ1MC4wMDAwMTcxNjYxMzgsNnw2LDE6MXwyOjEsMDowOjA6MDpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18="
+has_dorchadas: true
+signature1: bb063ae11a317be1c2e825a6bbc7e4e0
+sign(): bb063ae11a317be1c2e825a6bbc7e4e0
+verify(): true

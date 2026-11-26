@@ -1,0 +1,95 @@
+---
+title: "Robotrickster — Tinkoff CTF 2024"
+description: "Reversing an Android shell-game app from Tinkoff CTF 2024: decompiling it to find the API endpoints and XOR key, then writing a Go client to win the game and decrypt the flag."
+pubDatetime: 2024-04-08
+tags:
+    - CTF
+    - reverse
+    - mobile
+    - Tinkoff
+    - SPbCTF
+    - Java
+    - Golang
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import robotricksterZip from '../assets/ctf-tinkoff-2024-robotrickster/robotrickster.zip?url';
+
+
+## Initial Data
+
+**Task link**
+[Robot Swindler](https://ctf.tinkoff.ru/tasks/robotrickster)
+
+**Description**
+There's trouble on the space trains: a charming android swindler has appeared, beating everyone at the cup game and cleaning them out. Do a little mischief — win the whole million coins jingling in the robot swindler's pockets.
+
+**Android app**
+<a href={robotricksterZip}>Download robotrickster.zip</a>
+
+## Solution
+
+### Analysis of the application source code
+
+Let's decompile the application.
+We can use any online decompiler, for example [.JAR and .Class to Java decompiler](https://javadecompilers.com).
+After decompiling, we get an archive with .java files.
+
+Three endpoints are used:
+- `PUT /start/{uuid}`
+  - Game initialization; `uuid` is a randomly generated value filled via `UUID.randomUUID().toString()`
+- `GET /next/{uuid}`
+  - Move to the next round
+- `GET /accept/{uuid}/{answer}`, where `answer` is a number
+  - The user chooses the correct cup
+
+File `GameService.java`:
+
+<CodeFile file="GameService.java" />
+
+The endpoints belong to the host `t-trickster-jbi8aw9z.spbctf.ru`, which is set when `GameService` is created.
+
+File `GameServiceFactory.java`:
+
+<CodeFile file="GameServiceFactory.java" />
+
+The `FlagController` class has a `decrypt` function that symmetrically encrypts the flag using XOR.
+The key is passed as an argument.
+
+File `FlagController.java`:
+
+<CodeFile file="FlagController.java" />
+
+In the `clickByCup` function, the `GET /accept/{uuid}/{answer}` endpoint is called, where `awswer` is the cup chosen by the user. On success, the score is updated and the `update` function is called. The `update` function prints the decrypted flag if the key is not empty.
+
+File `GameViewModel.java`:
+
+<CodeFile file="GameViewModel.java" />
+
+### Flag retrieval strategy
+
+- Start a new game with `PUT /start/{uuid}`
+- Repeat until we get the key:
+  - Shuffle with `GET /next/{uuid}`
+  - Find the ball's current position and pass it in `GET /accept/{uuid}/{answer}`
+- Decrypt the flag with the key
+
+### Writing the solution program
+
+Let's write a program in Go:
+
+<CodeFile file="main.go" />
+
+### Getting the flag
+
+Run the Go program we wrote:
+
+<CodeFile file="solve-output.log" />
+
+We got the flag `tctf{r0b0t_sw1ndler_scr33ches_th3n_break5_d0wn}`.
+
+## Links
+
+- [SPbCTF writeup for the Robot Swindler task](https://spbctf.notion.site/Robotrickster-0cb5c3037a68461a857d38e64b6544c9)
+- [.JAR and .Class to Java decompiler](https://javadecompilers.com)
+- [Java decompiler online / APK decompiler](https://www.decompiler.com)

@@ -1,0 +1,68 @@
+---
+title: ROSSAU — osu!gaming CTF 2024
+description: "Factoring a small RSA modulus with factordb, computing the private exponent, then looking up the player whose osu! user ID matches it to recover the flag."
+pubDatetime: 2024-03-29
+tags:
+    - CTF
+    - cryptography
+    - osugaming.lol
+    - Python
+    - RSA
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+
+
+## Initial Data
+
+**Task link**
+[crypto/ROSSAU](https://ctf.osugaming.lol/challs)
+
+**Description**
+My friend really likes sending me hidden messages, something about a public key with `n = 5912718291679762008847883587848216166109` and `e = 876603837240112836821145245971528442417`.
+What is the name of player with the user ID of the private key exponent? (Wrap with osu{})
+
+## Solution
+
+The number `n` is not that large. We can try to factorize it.
+
+One option is to visit [factordb.com](http://factordb.com) — the divisors may already be known. We got lucky: `59644326261100157131` and `99132954671935298039` are the sought divisors.
+
+Let's write a simple Python program to find the secret exponent:
+
+<CodeFile file="solve.py" />
+
+Run the script:
+
+<CodeFile file="solve-output.log" />
+
+The secret exponent is found.
+
+Now let's find the user with that ID.
+
+Open the page [https://osu.ppy.sh/users/124493](https://osu.ppy.sh/users/124493) and we see the username there. Or make a curl request and see the profile name in the title tag:
+
+```bash
+$ curl -s "https://osu.ppy.sh/users/124493" | xq -x '//title'
+chocomint · player info | osu!
+```
+
+We get the flag `osu{chocomint}`.
+
+## Alternative Solutions
+
+The secret exponent could also be found using the owiener library:
+
+```python
+import owiener
+d = owiener.attack(e, n)
+```
+
+Or with RsaCtfTool.
+
+## Links
+
+* [Factor table Online](http://factordb.com)
+* [RSA calculator Online](https://www.tausquared.net/pages/ctf/rsa.html)
+* [owiener - A Python3 implementation of the Wiener attack on RSA - Github](https://github.com/orisano/owiener)
+* [RsaCtfTool - RSA attack tool (mainly for ctf) - retrieve private key from weak public key and/or uncipher data - Github](https://github.com/RsaCtfTool/RsaCtfTool)
