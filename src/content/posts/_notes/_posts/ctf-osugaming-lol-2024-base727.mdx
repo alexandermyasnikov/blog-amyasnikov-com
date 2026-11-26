@@ -1,0 +1,60 @@
+---
+title: Base727 — osu!gaming CTF 2024
+description: "Reversing a custom base-727 encoding by swapping the bases and the input/output format to recover the flag from a hex-encoded ciphertext."
+pubDatetime: 2024-03-28
+tags:
+    - CTF
+    - cryptography
+    - osugaming.lol
+    - Python
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import base727 from '../assets/ctf-osugaming-lol-2024-base727/base727.zip?url';
+
+
+## Initial Data
+
+**Task link**
+[crypto/base727](https://ctf.osugaming.lol/challs)
+
+**Description**
+You: Write a program that encodes any string in base 727
+ChatGPT: Here's a Python program to encode any string into base 727
+
+**Files**
+[Download base727.zip](base727)
+
+## Input Analysis
+
+File `727.py`:
+
+<CodeFile file="727.py" />
+
+File `out.txt`:
+
+<CodeFile file="out.txt" />
+
+## Solution
+
+The `encode_base_727` function merely converts a string into a number and back into a string, changing the base from 256 to 727.
+
+To get the flag, we need to perform the reverse operation:
+swap the bases — 256 for 727, and 727 for 256 — and change the input/output data format.
+
+<CodeFile file="solve.diff" />
+
+The full script:
+
+<CodeFile file="solve.py" />
+
+Run the script:
+
+```bash
+$ python3 ./solve.py
+osu{wysiwysiwysiywsyw******}
+```
+
+## Conclusion
+
+- An elementary task. Even ChatGPT can solve it ;-)

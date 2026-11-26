@@ -14,7 +14,7 @@ tasks:
   dev:sync:
     cmds:
       - rsync --verbose --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
-      - fswatch --recursive --one-per-batch --latency 1 "{{.NOTES}}" | xargs -I{} rsync --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
+      - fswatch --recursive --one-per-batch --latency 1 "{{.NOTES}}" | xargs -I{} rsync --verbose --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
   dist:diff:
     desc: "diff dist against a fresh build of REF"
     cmds:

@@ -1,0 +1,27 @@
+--- a/727.py
++++ b/solve.py
+@@ -1,15 +1,16 @@
+-flag = open("flag.txt").read()
++encoded_string = open("out.txt").read().strip()
++encoded_string = binascii.unhexlify(encoded_string.encode()).decode()
+
+-def encode_base_727(string):
+-    base = 727
++def decode_base_256(string):
++    base = 256
+     encoded_value = 0
+
+     for char in string:
+-        encoded_value = encoded_value * 256 + ord(char)
++        encoded_value = encoded_value * 727 + ord(char)
+
+     encoded_string = ""
+     while encoded_value > 0:
+@@ -19,5 +20,5 @@ def encode_base_727(string):
+     return encoded_string
+
+
+-encoded_string = encode_base_727(flag)
+-print(binascii.hexlify(encoded_string.encode()))
++decoded_string = decode_base_256(encoded_string)
++print(decoded_string)

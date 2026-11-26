@@ -1,0 +1,96 @@
+---
+title: Alice Doesn't Know Algebra — Codeby.games
+description: "Recovering an RSA key from two ciphertexts encrypted with different public exponents using the extended Euclidean algorithm."
+pubDatetime: 2023-11-25
+tags:
+    - CTF
+    - cryptography
+    - codeby.games
+    - Python
+    - extended GCD
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+import aliceArchive from '../assets/ctf-codeby-games-alice-doesnt-know-algebra/Alice_doesnt_know_algebra.zip?url';
+
+
+## Initial Data
+
+**Task link**
+[Alice doesn't know algebra](https://codeby.games/en/categories/cryptography/89a1c755-9413-405f-8b2d-4cdc2ecdb5fb)
+
+**Description**
+Alice took a long time to decide which exponent to choose when encrypting the key. In the end, she decided to use both...
+
+**Difficulty**
+Medium
+
+**Server**
+`62.173.***.***:11***`
+
+**Files**
+[Download Alice_doesnt_know_algebra.zip](aliceArchive)
+
+## Solution
+
+### Input Analysis
+
+Unpack the `task.zip` archive. It contains a single file, `cipher.py`. Let's look at its contents:
+
+<CodeFile file="cipher.py" />
+
+Connect to the remote server:
+
+<CodeFile file="server-output.log" />
+
+### Reasoning
+
+Known:
+- `N` — modulus
+- `e1` — first exponent
+- `e2` — second exponent
+- `c1 = F ^ e1 mod N` — first encrypted message
+- `c2 = F ^ e2 mod N` — second encrypted message
+
+Unknown:
+- `F` — the flag
+
+Multiply `c1` and `c2` by the powers `p` and `q`:
+`(c1 ^ p) * (c2 ^ q) = F ^ (p * e1 + q * e2) mod N`
+
+`F == (c1 ^ p) * (c2 ^ q)` if `p * e1 + q * e2 == 1`
+
+Use the property:
+`d ^ s = d ^ (s * (N ^ k)) mod N` for any `d`, `s`, `N`, `k`
+
+That is, `p * e1 + q * e2 = N ^ k`
+That is, `gcd(p, q, e1, e2) = 1`
+
+Find `p` and `q` from the equation above, and then `F`:
+`F = (c1 ^ p) * (c2 ^ q)`
+
+### solve.py Script
+
+Let's write a script to find the key according to the reasoning above:
+
+<CodeFile file="solve.py" />
+
+Run solve.py:
+
+<CodeFile file="solve-output.log" />
+
+### Getting the Flag
+
+Connect to the server and enter the recovered key:
+
+<CodeFile file="solve-output-2.log" />
+
+We see the flag `CODEBY{RSA_*************}`.
+
+## Conclusion
+
+An easy task; just a bit of math to remember.
+
+---
+
+P.S. Some data is replaced with asterisks.

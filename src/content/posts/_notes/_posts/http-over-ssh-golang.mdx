@@ -14,6 +14,7 @@ tags:
 ---
 
 import CodeFile from "@/custom/CodeFile.astro";
+import wiresharkWebp from '../assets/http-over-ssh-golang/wireshark.webp?url';
 
 
 ## HTTP over SSH in Go
@@ -211,4 +212,4 @@ ssh root@remote-host  "tcpdump -i any -U -s0 -w - 'port 8000'" | wireshark -k -i
 ```
 
 In `Wireshark`, you get the same data as in `tcpdump`, but `Wireshark` is more convenient to use.
-![wireshark](../assets/http-over-ssh-golang/wireshark.webp)
+![wireshark](wiresharkWebp)
