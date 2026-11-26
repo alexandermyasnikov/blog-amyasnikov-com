@@ -18,11 +18,12 @@ type Props = {
 const { file, offset, limit } = Astro.props;
 const name = path.posix.basename(file);
 const lang = (name.split(".").pop() ?? "plaintext") as BundledLanguage;
-const slug = Astro.params.slug ?? Astro.url.pathname.split("/").filter(Boolean).pop();
+const slug =
+  Astro.params.slug ?? Astro.url.pathname.split("/").filter(Boolean).pop();
 const isExplicitPath = file.includes("/");
 if (!isExplicitPath && !slug) throw new Error("CodeFile: post slug is missing");
-const rel = isExplicitPath ? file : `../import/${slug}/${file}`;
-const sources = import.meta.glob("../content/posts/_notes/import/*/*", {
+const rel = isExplicitPath ? file : `../sources/${slug}/${file}`;
+const sources = import.meta.glob("../content/posts/_notes/sources/*/*", {
   query: "?raw",
   import: "default",
   eager: true,

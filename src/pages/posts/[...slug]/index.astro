@@ -85,11 +85,17 @@ const covers = import.meta.glob(
   "../../../content/posts/_notes/assets/*/featuredImage.*",
   { import: "default", eager: true }
 );
-const coverKey = Object.keys(covers).find(key =>
-  key.startsWith(
-    `../../../content/posts/_notes/assets/${Astro.params.slug}/featuredImage.`
-  )
-);
+const coverName = post.filePath
+  ?.split("/")
+  .pop()
+  ?.replace(/\.[^.]+$/, "");
+const coverKey = coverName
+  ? Object.keys(covers).find(key =>
+      key.startsWith(
+        `../../../content/posts/_notes/assets/${coverName}/featuredImage.`
+      )
+    )
+  : undefined;
 const cover = coverKey ? (covers[coverKey] as ImageMetadata) : undefined;
 
 let ogImageUrl: string | undefined;
