@@ -1,0 +1,51 @@
+---
+import path from "node:path";
+import type { BundledLanguage } from "shiki";
+import { Code } from "astro:components";
+import {
+  transformerNotationDiff,
+  transformerNotationHighlight,
+  transformerNotationWordHighlight,
+} from "@shikijs/transformers";
+import { transformerFileName } from "@/utils/transformers/fileName";
+
+type Props = {
+  file: string;
+  offset?: number;
+  limit?: number;
+};
+
+const { file, offset, limit } = Astro.props;
+const name = path.posix.basename(file);
+const lang = (name.split(".").pop() ?? "plaintext") as BundledLanguage;
+const slug = Astro.params.slug ?? Astro.url.pathname.split("/").filter(Boolean).pop();
+const isExplicitPath = file.includes("/");
+if (!isExplicitPath && !slug) throw new Error("CodeFile: post slug is missing");
+const rel = isExplicitPath ? file : `../import/${slug}/${file}`;
+const sources = import.meta.glob("../content/posts/_notes/import/*/*", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
+const key = path.posix.normalize(`../content/posts/_notes/_posts/${rel}`);
+const code = sources[key];
+if (typeof code !== "string") throw new Error(`CodeFile: no source for ${key}`);
+const lines = code.trim().split("\n");
+const first = Math.max(1, offset ?? 1);
+const last = limit && limit > 0 ? first - 1 + limit : undefined;
+const shown = lines.slice(first - 1, last).join("\n");
+if (!shown.trim()) throw new Error(`CodeFile: empty slice of ${key}`);
+const codeProps = {
+  lang,
+  themes: { light: "min-light", dark: "night-owl" } as const,
+  defaultColor: false as const,
+  transformers: [
+    transformerFileName({ style: "v2", hideDot: false }),
+    transformerNotationHighlight(),
+    transformerNotationWordHighlight(),
+    transformerNotationDiff({ matchAlgorithm: "v3" }),
+  ],
+};
+---
+
+<Code code={shown} {...codeProps} meta={`file="${name}"`} />
