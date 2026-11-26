@@ -2,6 +2,8 @@ version: '3'
 vars:
   NOTES: '{{.HOME}}/data/notes/dev/blog-amyasnikov-com'
   SITE: '{{.TASKFILE_DIR}}'
+  REF: 'HEAD'
+  TMP: '/tmp/notes-{{now | date "20060102-150405"}}'
 tasks:
   dev:
     deps: [dev:sync, dev:astro]
@@ -13,3 +15,11 @@ tasks:
     cmds:
       - rsync --verbose --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
       - fswatch --recursive --one-per-batch --latency 1 "{{.NOTES}}" | xargs -I{} rsync --archive --delete "{{.NOTES}}/" "{{.SITE}}/src/content/posts/_notes/"
+  dist:diff:
+    desc: "diff dist against a fresh build of REF"
+    cmds:
+      - npm run build
+      - git worktree add --detach "{{.TMP}}" "{{.REF}}" >/dev/null
+      - rsync --archive --exclude .vite "{{.SITE}}/node_modules/" "{{.TMP}}/node_modules/"
+      - cd "{{.TMP}}" && npm run build
+      - git diff --no-index "{{.TMP}}/dist" "{{.SITE}}/dist"
