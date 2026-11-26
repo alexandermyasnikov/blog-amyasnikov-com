@@ -1,0 +1,214 @@
+---
+title: HTTP over SSH in Go
+description: "How to send HTTP requests to a web server on a remote machine from a Go application through an SSH tunnel using a custom http.RoundTripper and socat, with traffic analysis via tcpdump and Wireshark."
+pubDatetime: 2025-07-22
+tags:
+    - Golang
+    - Python
+    - socat
+    - tcpdump
+    - wireshark
+    - SSH
+    - TCP
+    - HTTP
+---
+
+import CodeFile from "@/custom/CodeFile.astro";
+
+
+## HTTP over SSH in Go
+
+### Task
+
+A web server is running on a remote machine and is accessible only via localhost; it does not accept external connections. The only way to access this machine is through SSH.
+
+Goal: send HTTP requests to this server from a Go application through an SSH tunnel.
+
+
+## Web Server
+
+To test the setup, we'll write a small Python application that prints the request data: the HTTP method, query parameters, and headers.
+<CodeFile file="server.py"/>
+
+Run the server and verify that the web server is working:
+```bash
+$ curl -s -G "http://localhost:8000/path" -H "Custom-Header: SomeValue" -d "env=dev" -d "name=test" | jq
+
+{
+  "method": "GET",
+  "path": "/path",
+  "query_params": {
+    "env": [
+      "dev"
+    ],
+    "name": [
+      "test"
+    ]
+  },
+  "headers": {
+    "Host": "localhost:8000",
+    "User-Agent": "curl/8.12.1",
+    "Accept": "*/*",
+    "Custom-Header": "SomeValue"
+  }
+}
+```
+
+In the server log, we see:
+```bash
+python3 ./main.py
+
+Start server on 8000
+127.0.0.1 - - [18/Jul/2025 20:15:41] "GET /?lang=go&query-arg=my-arg-1 HTTP/1.1" 200 -
+```
+
+The web server is running.
+
+
+## Go Application
+
+### SSH Client
+
+First, we need to create an `SSH` client.
+We use the standard library `golang.org/x/crypto/ssh` for `SSH` functionality.
+Specify the parameters: `user`, `host`, and `key`, then create the client using `ssh.Dial`.
+<CodeFile file="ssh-client.go" />
+
+### HTTP Transport
+
+In Go, the `http.Client` struct has a `Transport` field, which implements the `http.RoundTripper` interface and is responsible for sending HTTP requests.
+To override the data transfer method, you can provide a custom implementation of the `RoundTrip(*http.Request) (*http.Response, error)` method.
+
+For the transport, we will use `socat` launched inside an SSH session. The HTTP request is serialized and sent via `stdin` to `socat`; `socat` forwards the data over TCP to the web server port. The HTTP response is read from `socat`’s `stdout` and deserialized into an `http.Response` type.
+
+This solution is not ideal and has many caveats:
+* `socat` may not be installed on the remote system.
+* `socat` can be replaced with `ncat`, but there are timeout issues. You can explicitly set them with `ncat -q1`, but that’s more of a temporary workaround.
+* Most likely, a native way to transmit raw HTTP requests to the web server should be used. However, I couldn’t find a better option.
+* Opening a new SSH session for every request for request isolation is not very efficient, but it works well enough as an example.
+
+Code:
+<CodeFile file="http-transport.go" />
+
+### Combining the SSH Client and HTTP Client
+
+Let's put the pieces together.
+Create an `SSH` client. Execute test commands to verify that the `SSH` session is working.
+Create an `HTTP` client with a custom transport implementation.
+Perform a test `HTTP` request using the standard library.
+
+Code:
+<CodeFile file="main.go" />
+
+### Complete Solution
+
+Full source code of the solution:
+<CodeFile file="solution.go" />
+
+
+## Running
+
+Build the application and run it:
+```bash
+❯ go build -o /tmp/service ./main.go && /tmp/service
+
+23:15:40.445698 hostname -> remote-host
+23:15:41.214312 uptime ->  20:15:39  up  10:53,  2 users,  load average: 0.45, 0.33, 0.43
+23:15:41.975354 whoami -> root
+23:15:43.237978 Body: 200 - {"method": "GET", "path": "/", "query_params": {"lang": ["go"], "query-arg": ["my-arg-1"]}, "headers": {"Host": "localhost", "User-Agent": "Go-http-client/1.1", "Custom-Header": "my-arg-1"}}
+```
+
+
+Hooray! It worked.
+The application connected to the remote server via `SSH` and performed an `HTTP` request to the local web server on that machine.
+
+
+## Network Traffic Analysis
+
+### tcpdump
+
+Let's run `tcpdump` on the remote server and see what data was transmitted over the network to the web server:
+```bash
+tcpdump -i any -A -s 0 -X -nn -l port 8000
+```
+
+Establishing a TCP connection. The three-way handshake: `SYN`, `SYN`-`ACK`, `ACK`:
+```tcpdump
+20:15:41.376906 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [S], seq 3363993963, win 65495, options [mss 65495,sackOK,TS val 3490232963 ecr 0,nop,wscale 8], length 0
+20:15:41.376939 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [S.], seq 2708443969, ack 3363993964, win 65483, options [mss 65495,sackOK,TS val 3490232963 ecr 3490232963,nop,wscale 8], length 0
+20:15:41.376962 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [.], ack 1, win 256, options [nop,nop,TS val 3490232963 ecr 3490232963], length 0
+```
+
+`socat` sent the `HTTP` request, server acknowledged receipt:
+```tcpdump
+20:15:41.377051 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [P.], seq 1:121, ack 1, win 256, options [nop,nop,TS val 3490232963 ecr 3490232963], length 120
+	0x0000:  4500 00ac ccd1 4000 4006 6f78 7f00 0001  E.....@.@.ox....
+	0x0010:  7f00 0001 b692 1f40 c882 796c a16f 9342  .......@..yl.o.B
+	0x0020:  8018 0100 fea0 0000 0101 080a d008 ba83  ................
+	0x0030:  d008 ba83 4745 5420 2f3f 6c61 6e67 3d67  ....GET./?lang=g
+	0x0040:  6f26 7175 6572 792d 6172 673d 6d79 2d61  o&query-arg=my-a
+	0x0050:  7267 2d31 2048 5454 502f 312e 310d 0a48  rg-1.HTTP/1.1..H
+	0x0060:  6f73 743a 206c 6f63 616c 686f 7374 0d0a  ost:.localhost..
+	0x0070:  5573 6572 2d41 6765 6e74 3a20 476f 2d68  User-Agent:.Go-h
+	0x0080:  7474 702d 636c 6965 6e74 2f31 2e31 0d0a  ttp-client/1.1..
+	0x0090:  4375 7374 6f72 6d2d 4865 6164 6572 3a20  Custom--Header:.
+	0x00a0:  6d79 2d61 7267 2d31 0d0a 0d0a            my-arg-1....
+20:15:41.377063 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [.], ack 121, win 256, options [nop,nop,TS val 3490232963 ecr 3490232963], length 0
+```
+
+Server sent the response, `socat` acknowledged receipt:
+```tcpdump
+20:15:41.377910 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [P.], seq 1:125, ack 121, win 256, options [nop,nop,TS val 3490232964 ecr 3490232963], length 124
+	0x0000:  4500 00b0 39ed 4000 4006 0259 7f00 0001  E...9.@.@..Y....
+	0x0010:  7f00 0001 1f40 b692 a16f 9342 c882 79e4  .....@...o.B..y.
+	0x0020:  8018 0100 fea4 0000 0101 080a d008 ba84  ................
+	0x0030:  d008 ba83 4854 5450 2f31 2e30 2032 3030  ....HTTP/1.0.200
+	0x0040:  204f 4b0d 0a53 6572 7665 723a 2042 6173  .OK..Server:.Bas
+	0x0050:  6548 5454 502f 302e 3620 5079 7468 6f6e  eHTTP/0.6.Python
+	0x0060:  2f33 2e36 2e31 350d 0a44 6174 653a 2046  /3.6.15..Date:.F
+	0x0070:  7269 2c20 3138 204a 756c 2032 3032 3520  ri,.18.Jul.2025.
+	0x0080:  3230 3a31 353a 3431 2047 4d54 0d0a 436f  20:15:41.GMT..Co
+	0x0090:  6e74 656e 742d 7479 7065 3a20 6170 706c  ntent-type:.appl
+	0x00a0:  6963 6174 696f 6e2f 6a73 6f6e 0d0a 0d0a  ication/json....
+20:15:41.377926 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [.], ack 125, win 256, options [nop,nop,TS val 3490232964 ecr 3490232964], length 0
+20:15:41.378014 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [P.], seq 125:316, ack 121, win 256, options [nop,nop,TS val 3490232964 ecr 3490232964], length 191
+	0x0000:  4500 00f3 39ee 4000 4006 0215 7f00 0001  E...9.@.@.......
+	0x0010:  7f00 0001 1f40 b692 a16f 93be c882 79e4  .....@...o....y.
+	0x0020:  8018 0100 fee7 0000 0101 080a d008 ba84  ................
+	0x0030:  d008 ba84 7b22 6d65 7468 6f64 223a 2022  ....{"method":."
+	0x0040:  4745 5422 2c20 2270 6174 6822 3a20 222f  GET",."path":."/
+	0x0050:  222c 2022 7175 6572 795f 7061 7261 6d73  ",."query_params
+	0x0060:  223a 207b 226c 616e 6722 3a20 5b22 676f  ":.{"lang":.["go
+	0x0070:  225d 2c20 2271 7565 7279 2d61 7267 223a  "],."query-arg":
+	0x0080:  205b 226d 792d 6172 672d 3122 5d7d 2c20  .["my-arg-1"]},.
+	0x0090:  2268 6561 6465 7273 223a 207b 2248 6f73  "headers":.{"Hos
+	0x00a0:  7422 3a20 226c 6f63 616c 686f 7374 222c  t":."localhost",
+	0x00b0:  2022 5573 6572 2d41 6765 6e74 223a 2022  ."User-Agent":."
+	0x00c0:  476f 2d68 7474 702d 636c 6965 6e74 2f31  Go-http-client/1
+	0x00d0:  2e31 222c 2022 4375 7374 6f72 6d2d 4865  .1",."Custom--He
+	0x00e0:  6164 6572 223a 2022 6d79 2d61 7267 2d31  ader":."my-arg-1
+	0x00f0:  227d 7d                                  "}}
+20:15:41.378022 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [.], ack 316, win 256, options [nop,nop,TS val 3490232964 ecr 3490232964], length 0
+```
+
+Closing the `TCP` connection. The server closes the connection and the client acknowledges. Then the client closes the connection and the server acknowledges:
+```tcpdump
+20:15:41.378091 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [F.], seq 316, ack 121, win 256, options [nop,nop,TS val 3490232964 ecr 3490232964], length 0
+20:15:41.418927 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [.], ack 317, win 256, options [nop,nop,TS val 3490233005 ecr 3490232964], length 0
+20:15:41.878718 lo    In  IP 127.0.0.1.46738 > 127.0.0.1.8000: Flags [F.], seq 121, ack 317, win 256, options [nop,nop,TS val 3490233464 ecr 3490232964], length 0
+20:15:41.878754 lo    In  IP 127.0.0.1.8000 > 127.0.0.1.46738: Flags [.], ack 122, win 256, options [nop,nop,TS val 3490233465 ecr 3490233464], length 0
+```
+
+No surprises: handshake, request, response, close.
+The web server and `socat` were on the same network and communicated through localhost.
+
+
+### Wireshark
+
+`Wireshark` is usually not installed on remote hosts. Therefore, we capture all necessary packets on the remote host in real-time by streaming output from `tcpdump`:
+```bash
+ssh root@remote-host  "tcpdump -i any -U -s0 -w - 'port 8000'" | wireshark -k -i -
+```
+
+In `Wireshark`, you get the same data as in `tcpdump`, but `Wireshark` is more convenient to use.
+![wireshark](../assets/http-over-ssh-golang/wireshark.webp)
